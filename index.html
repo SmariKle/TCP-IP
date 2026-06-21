@@ -1,1070 +1,1107 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Mail, Scissors, Box, Send, Server, Network,
-    Play, ArrowRight, ShieldCheck, MessageSquare, 
-    Layers, Target, ListChecks, Terminal, Activity,
-    CheckCircle2, AlertCircle, FileBox, Database, Unlock, FileText,
-    RefreshCw, Info, Settings, User, Fingerprint
-} from 'lucide-react';
-
-const globalStyles = `
-    /* Cyber-Theme Basics */
-    body, html { 
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-        background-color: #0f172a; 
-        color: #f8fafc; 
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        box-sizing: border-box;
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Die digitale Matrjoschka - TCP/IP Kapselung</title>
+    <!-- Tailwind CSS für das Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Maps für React und Lucide Icons im Browser -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.344.0"
+      }
     }
-    
-    .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-    @keyframes shake {
-        10%, 90% { transform: translate3d(-1px, 0, 0); border-color: #ef4444; }
-        20%, 80% { transform: translate3d(2px, 0, 0); }
-        30%, 50%, 70% { transform: translate3d(-3px, 0, 0); border-color: #ef4444; }
-        40%, 60% { transform: translate3d(3px, 0, 0); }
-    }
+    </script>
+    <!-- Babel Standalone zum Kompilieren von JSX im Browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Grundlegendes Styling, um Flimmern vor dem Laden zu vermeiden */
+        body { background-color: #0f172a; margin: 0; padding: 0; min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-    .slide-right { animation: slideRight 1.5s ease-in-out forwards; }
-    @keyframes slideRight { 
-        0% { transform: translateX(0); opacity: 1;}
-        50% { transform: translateX(100%); opacity: 1;}
-        100% { transform: translateX(200%); opacity: 0; } 
-    }
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Mail, Scissors, Box, Send, Server, Network,
+            Play, ArrowRight, ShieldCheck, MessageSquare, 
+            Layers, Target, ListChecks, Terminal, Activity,
+            CheckCircle2, AlertCircle, FileBox, Database, Unlock, FileText,
+            RefreshCw, Info, Settings, User, Fingerprint
+        } from 'lucide-react';
 
-    .flash-success { animation: flashSuccess 0.8s ease-out; }
-    @keyframes flashSuccess {
-        0% { box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0.4); border-color: #10b981; }
-        50% { box-shadow: inset 0 0 20px 5px rgba(16, 185, 129, 0.1); border-color: #34d399; }
-        100% { box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
+        const globalStyles = `
+            /* Cyber-Theme Basics */
+            body, html { 
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+                background-color: #0f172a; 
+                color: #f8fafc; 
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+                box-sizing: border-box;
+            }
+            
+            .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+            
+            .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+            @keyframes shake {
+                10%, 90% { transform: translate3d(-1px, 0, 0); border-color: #ef4444; }
+                20%, 80% { transform: translate3d(2px, 0, 0); }
+                30%, 50%, 70% { transform: translate3d(-3px, 0, 0); border-color: #ef4444; }
+                40%, 60% { transform: translate3d(3px, 0, 0); }
+            }
 
-    .font-mono-term { font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; }
+            .slide-right { animation: slideRight 1.5s ease-in-out forwards; }
+            @keyframes slideRight { 
+                0% { transform: translateX(0); opacity: 1;}
+                50% { transform: translateX(100%); opacity: 1;}
+                100% { transform: translateX(200%); opacity: 0; } 
+            }
 
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-    
-    .panel-container {
-        display: flex;
-        flex-direction: column;
-        background-color: rgba(30, 41, 59, 0.95);
-        border: 1px solid rgba(71, 85, 105, 0.5);
-        border-radius: 1rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-        overflow: hidden;
-        height: 100%;
-    }
-    .panel-header {
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid rgba(71, 85, 105, 0.8);
-        background-color: rgba(15, 23, 42, 0.8);
-        flex-shrink: 0;
-    }
-    .panel-body {
-        padding: 1.5rem;
-        overflow-y: auto;
-        flex: 1 1 auto;
-    }
-    .panel-footer {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid rgba(71, 85, 105, 0.8);
-        background-color: rgba(15, 23, 42, 0.8);
-        flex-shrink: 0;
-    }
-`;
+            .flash-success { animation: flashSuccess 0.8s ease-out; }
+            @keyframes flashSuccess {
+                0% { box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0.4); border-color: #10b981; }
+                50% { box-shadow: inset 0 0 20px 5px rgba(16, 185, 129, 0.1); border-color: #34d399; }
+                100% { box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0); }
+            }
 
-const LEVELS = [
-    { id: 1, name: "Anwendungsschicht", short: "Anwendung", Icon: MessageSquare, color: "cyan" },
-    { id: 2, name: "Transportschicht", short: "Transport", Icon: Scissors, color: "purple" },
-    { id: 3, name: "Internetschicht", short: "Internet", Icon: Mail, color: "orange" },
-    { id: 4, name: "Netzzugangsschicht", short: "Netzzugang", Icon: Box, color: "emerald" },
-    { id: 5, name: "PC des Freundes", short: "Empfänger", Icon: User, color: "red" }
-];
+            .font-mono-term { font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; }
 
-const Term = ({ word, def }) => (
-    <span 
-        className="border-b-2 border-dashed border-cyan-400 text-cyan-300 cursor-help relative inline-block transition-colors hover:text-cyan-200 hover:bg-cyan-900/30 px-1 rounded"
-        onMouseEnter={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            window.dispatchEvent(new CustomEvent('show-tooltip', { detail: { text: def, rect } }));
-        }}
-        onMouseLeave={() => window.dispatchEvent(new CustomEvent('hide-tooltip'))}
-    >
-        {word}
-    </span>
-);
+            ::-webkit-scrollbar { width: 8px; height: 8px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+            
+            .panel-container {
+                display: flex;
+                flex-direction: column;
+                background-color: rgba(30, 41, 59, 0.95);
+                border: 1px solid rgba(71, 85, 105, 0.5);
+                border-radius: 1rem;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+                overflow: hidden;
+                height: 100%;
+            }
+            .panel-header {
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid rgba(71, 85, 105, 0.8);
+                background-color: rgba(15, 23, 42, 0.8);
+                flex-shrink: 0;
+            }
+            .panel-body {
+                padding: 1.5rem;
+                overflow-y: auto;
+                flex: 1 1 auto;
+            }
+            .panel-footer {
+                padding: 1rem 1.5rem;
+                border-top: 1px solid rgba(71, 85, 105, 0.8);
+                background-color: rgba(15, 23, 42, 0.8);
+                flex-shrink: 0;
+            }
+        `;
 
-const THEORY = {
-    1: {
-        title: "Anwendungsschicht",
-        getTask: () => <>Bildet die direkte Schnittstelle zum Nutzer. Sie wandelt Eingaben aus einem Programm (z.B. Chat-App, Browser) in zu versendende <Term word="Nutzdaten (Payload)" def="Die reinen Daten, also die eigentliche Nachricht, das Bild oder die Datei, ohne Steuerungsinformationen."/> um.</>,
-        getHeaderFunction: () => <>Der <strong>Anwendungs-Header</strong> teilt der Empfänger-App (<Term word="Client/Server" def="Client = anfragendes Gerät, Server = bereitstellendes Programm."/>) mit, um welches Datenformat es sich handelt (z.B. verschlüsselter Chat) und wie es interpretiert werden muss.</>,
-        protocols: <><Term word="HTTPS" def="Hypertext Transfer Protocol Secure: Zur verschlüsselten Übertragung von Web-Inhalten."/>, <Term word="SMTP" def="Simple Mail Transfer Protocol: Protokoll für E-Mails."/></>,
-        blueprint: "Protokoll: HTTPS\nDaten: Verschlüsselt"
-    },
-    2: {
-        title: "Transportschicht",
-        getTask: () => <>Sorgt für die logische Ende-zu-Ende Verbindung zwischen den Anwendungen. Sie zerteilt zu große Daten in netzwerktaugliche Stücke (<Term word="Segmentierung" def="Das Zerteilen einer großen Nachricht in mehrere kleine Segmente, die die maximale Übertragungsgröße (MTU) nicht überschreiten."/>).</>,
-        getHeaderFunction: () => <>Die <strong>Ports</strong> im Header ordnen die Daten auf dem Zielgerät der exakt richtigen App zu (<Term word="Multiplexing" def="Die Zuordnung von eingehenden Datenpaketen zu den jeweiligen Programmen auf einem Gerät anhand von Portnummern."/>). <strong>Sequenznummern</strong> sichern die korrekte Reihenfolge beim Empfänger.</>,
-        protocols: <><Term word="TCP" def="Transmission Control Protocol: Sehr zuverlässig, korrigiert Fehler und garantiert die Reihenfolge."/>, <Term word="UDP" def="User Datagram Protocol: Sehr schnell, aber unzuverlässig (z.B. für Livestreams)."/></>,
-        blueprint: "Ziel-Port: [Port der Ziel-App]\nQuell-Port: [Dein Port]\nSequenznummern\nweitere Steuerdaten"
-    },
-    3: {
-        title: "Internetschicht",
-        getTask: () => <>Übernimmt das weltweite <Term word="Routing" def="Die Wegfindung von Datenpaketen über verschiedene Netzknoten hinweg zum Ziel."/>. Diese Schicht sorgt dafür, dass Pakete über verschiedene Netze hinweg ihr finales Ziel finden.</>,
-        getHeaderFunction: () => <>Die <Term word="IP-Adressen" def="Internet Protocol: Die logische Adresse, die jedem Gerät im Netzwerk zugewiesen wird."/> im Header dienen der eindeutigen, netzwerkübergreifenden Adressierung von Sender und Empfänger. Sie verändern sich auf der gesamten Reise <strong>nicht</strong>.</>,
-        protocols: <><Term word="IPv4 / IPv6" def="Internet Protocol: Die Standardprotokolle zur logischen Adressierung."/>, <Term word="ICMP" def="Internet Control Message Protocol: Wird für Fehlermeldungen (z.B. Ping) genutzt."/></>,
-        blueprint: "Ziel-IP: [IP des Empfängers]\nQuell-IP: [Deine IP]\nweitere Steuerdaten"
-    },
-    4: {
-        title: "Netzzugangsschicht",
-        getTask: () => <>Übernimmt die physikalische Signalübertragung im direkten, lokalen Netzwerk (z.B. Kabel oder <Term word="WLAN" def="Wireless Local Area Network: Dein lokales, kabelloses Funknetz."/>) zum nächsten Nachbargerät.</>,
-        getHeaderFunction: () => <>Die <Term word="MAC-Adressen" def="Media Access Control: Die weltweit einmalige, fest eingebrannte Hardware-Adresse deiner Netzwerkkarte."/> im Header adressieren die Netzwerkkarten direkt. Ein zusätzlich generierter <strong>Trailer (<Term word="FCS" def="Frame Check Sequence: Eine Prüfsumme am Ende des Frames."/>)</strong> dient der Fehlererkennung auf dem Kabel.</>,
-        protocols: <>Ethernet, Wi-Fi, <Term word="ARP" def="Address Resolution Protocol: Übersetzt IP-Adressen in lokale MAC-Adressen."/></>,
-        blueprint: "Ziel-MAC: [MAC des Empfängers]\nQuell-MAC: [Deine MAC]\nweitere Steuerdaten\nTrailer: FCS (Fehlerprüfung)"
-    }
-};
+        const LEVELS = [
+            { id: 1, name: "Anwendungsschicht", short: "Anwendung", Icon: MessageSquare, color: "cyan" },
+            { id: 2, name: "Transportschicht", short: "Transport", Icon: Scissors, color: "purple" },
+            { id: 3, name: "Internetschicht", short: "Internet", Icon: Mail, color: "orange" },
+            { id: 4, name: "Netzzugangsschicht", short: "Netzzugang", Icon: Box, color: "emerald" },
+            { id: 5, name: "PC des Freundes", short: "Empfänger", Icon: User, color: "red" }
+        ];
 
-const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
-    const baseStyle = "px-6 py-3 rounded-lg font-bold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 text-base uppercase tracking-wider relative group";
-    const variants = {
-        primary: "bg-blue-600 hover:bg-blue-500 text-white shadow-lg disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none",
-        success: "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none",
-        outline: "border-2 border-slate-500 hover:border-blue-400 hover:bg-blue-900/30 text-slate-300 hover:text-blue-300 disabled:border-slate-800 disabled:text-slate-600"
-    };
-    return (
-        <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${disabled ? 'cursor-not-allowed' : ''} ${className}`}>
-            {children}
-        </button>
-    );
-};
-
-const FeedbackToast = ({ text, type, onClear }) => {
-    useEffect(() => {
-        if (text) {
-            const timer = setTimeout(() => {
-                onClear();
-            }, 4000);
-            return () => clearTimeout(timer);
-        }
-    }, [text, onClear]);
-
-    if (!text) return null;
-    const isError = type === 'error';
-    return (
-        <div className={`p-4 rounded-lg mb-4 flex items-start gap-4 text-base border-l-4 shadow-lg fade-in ${isError ? 'bg-red-950/80 border-red-500 text-red-200' : 'bg-emerald-950/80 border-emerald-500 text-emerald-200'}`}>
-            {isError ? <AlertCircle className="shrink-0 text-red-500 mt-1" size={20}/> : <CheckCircle2 className="shrink-0 text-emerald-500 mt-1" size={20}/>}
-            <span dangerouslySetInnerHTML={{ __html: text }} className="leading-relaxed" />
-        </div>
-    );
-};
-
-const SystemTerminal = ({ logs }) => {
-    const containerRef = useRef(null);
-    
-    useEffect(() => { 
-        if (containerRef.current) {
-            containerRef.current.scrollTop = containerRef.current.scrollHeight;
-        }
-    }, [logs]);
-
-    return (
-        <div className="panel-container w-full h-full max-h-[300px]">
-            <div className="panel-header py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3 text-slate-400">
-                    <Terminal size={18}/>
-                    <span className="text-sm font-mono-term font-bold uppercase tracking-widest">System Log</span>
-                </div>
-            </div>
-            <div 
-                ref={containerRef}
-                className="panel-body bg-[#020617] p-4 font-mono-term text-[13px] space-y-2 text-slate-300 overflow-y-auto scroll-smooth"
+        const Term = ({ word, def }) => (
+            <span 
+                className="border-b-2 border-dashed border-cyan-400 text-cyan-300 cursor-help relative inline-block transition-colors hover:text-cyan-200 hover:bg-cyan-900/30 px-1 rounded"
+                onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    window.dispatchEvent(new CustomEvent('show-tooltip', { detail: { text: def, rect } }));
+                }}
+                onMouseLeave={() => window.dispatchEvent(new CustomEvent('hide-tooltip'))}
             >
-                {logs.map((log, i) => (
-                    <div key={i} className={`flex gap-4 leading-relaxed fade-in ${log.type === 'error' ? 'text-red-400 font-bold' : log.type === 'success' ? 'text-emerald-400' : log.type === 'warn' ? 'text-yellow-400' : ''}`}>
-                        <span className="opacity-50 shrink-0">[{log.time}]</span>
-                        <span dangerouslySetInnerHTML={{ __html: log.msg }} />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const GlobalTooltip = () => {
-    const [tooltip, setTooltip] = useState({ text: '', visible: false, rect: null });
-
-    useEffect(() => {
-        const handleShow = (e) => setTooltip({ text: e.detail.text, visible: true, rect: e.detail.rect });
-        const handleHide = () => setTooltip(p => ({ ...p, visible: false }));
-        
-        window.addEventListener('show-tooltip', handleShow);
-        window.addEventListener('hide-tooltip', handleHide);
-        
-        return () => {
-            window.removeEventListener('show-tooltip', handleShow);
-            window.removeEventListener('hide-tooltip', handleHide);
-        };
-    }, []);
-
-    if (!tooltip.visible || !tooltip.rect) return null;
-
-    const { rect } = tooltip;
-    const x = rect.left + rect.width / 2;
-    let y = rect.top - 12;
-    let transform = 'translate(-50%, -100%)';
-    let arrowClass = 'border-t-slate-800';
-    let arrowStyle = { top: '100%' };
-
-    if (rect.top < 150) {
-        y = rect.bottom + 12;
-        transform = 'translate(-50%, 0)';
-        arrowClass = 'border-b-slate-800';
-        arrowStyle = { bottom: '100%' };
-    }
-
-    return (
-        <div 
-            className="fixed z-[99999] pointer-events-none fade-in"
-            style={{ left: x, top: y, transform }}
-        >
-            <div className="w-80 p-5 bg-slate-800 text-base text-slate-100 border border-slate-600 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] leading-relaxed text-center font-sans font-normal relative">
-                {tooltip.text}
-                <div className={`absolute left-1/2 -translate-x-1/2 border-8 border-transparent ${arrowClass}`} style={arrowStyle}></div>
-            </div>
-        </div>
-    );
-};
-
-const EncapsulationTracker = ({ activeLevel }) => {
-    const segments = activeLevel === 1 ? [1] : [1, 2, 3];
-
-    return (
-        <div className="panel-container w-full h-full max-h-[300px] flex flex-col">
-            <div className="panel-header py-3 border-b border-slate-700/80">
-                <h3 className="text-sm font-bold font-mono-term text-blue-400 flex items-center gap-2 uppercase tracking-widest">
-                    <Activity size={18}/> Live Paket-Sniffer (Raw)
-                </h3>
-            </div>
-            <div className="panel-body flex flex-col justify-center gap-5 bg-[#0a0a0a] p-6 overflow-x-auto overflow-y-hidden relative h-full">
-                <div className="absolute inset-0 opacity-[0.03] font-mono-term text-xs leading-tight overflow-hidden select-none pointer-events-none break-all text-emerald-500">
-                    {Array(400).fill("0A 1F B3 44 E2 00 11 ").join("")}
-                </div>
-                
-                {segments.map((segId) => (
-                    <div key={segId} className="flex items-stretch font-mono-term text-[13px] shadow-2xl border border-slate-700/50 rounded-lg overflow-hidden relative z-10 fade-in h-16 w-max mx-auto md:mx-0 shrink-0">
-                        {activeLevel >= 4 && (
-                            <div className="bg-emerald-900/80 text-emerald-200 px-5 flex flex-col items-center justify-center border-r border-emerald-950/50">
-                                <span className="font-bold tracking-widest">MAC</span>
-                                <span className="text-[10px] opacity-70">HEADER</span>
-                            </div>
-                        )}
-                        {activeLevel >= 3 && (
-                            <div className="bg-orange-900/80 text-orange-200 px-5 flex flex-col items-center justify-center border-r border-orange-950/50">
-                                <span className="font-bold tracking-widest">IP</span>
-                                <span className="text-[10px] opacity-70">HEADER</span>
-                            </div>
-                        )}
-                        {activeLevel >= 2 && (
-                            <div className="bg-purple-900/80 text-purple-200 px-5 flex flex-col items-center justify-center border-r border-purple-950/50">
-                                <span className="font-bold tracking-widest">TCP</span>
-                                <span className="text-[10px] opacity-70">HEADER</span>
-                            </div>
-                        )}
-                        <div className="bg-cyan-900/80 text-cyan-100 px-8 flex flex-col items-center justify-center min-w-[120px]">
-                            <span className="font-bold tracking-widest">DATA</span>
-                            <span className="text-[10px] opacity-70">SEGMENT_0{segId}</span>
-                        </div>
-                        {activeLevel >= 4 && (
-                            <div className="bg-slate-800 text-slate-300 px-3 flex flex-col items-center justify-center border-l border-slate-700/50">
-                                <span className="font-bold tracking-widest text-[10px]">FCS</span>
-                                <span className="text-[8px] opacity-70">TRAILER</span>
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const NetworkContextInfo = () => (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 flex flex-col gap-4 shadow-xl mb-6">
-        <div className="text-lg text-slate-300 flex items-start gap-4 border-b border-slate-700 pb-4">
-            <Network size={32} className="text-blue-400 shrink-0 mt-1"/>
-            <span className="leading-relaxed">
-                <strong className="text-blue-400 uppercase tracking-widest text-sm block mb-1">Szenario & Missionsdaten:</strong>
-                Stell dir vor, du möchtest eine Nachricht von deinem Computer an den Computer deines Freundes senden, der sich <strong>im gleichen Raum (lokales Netzwerk)</strong> befindet. 
-                <br/><br/>
-                <span className="text-base text-slate-400 border-l-4 border-emerald-600/50 pl-4 py-2 block bg-slate-950/50 rounded-r-lg">
-                    <strong className="text-emerald-400">Info:</strong> Da ihr euch im selben Netzwerk befindet, kommuniziert ihr hier direkt miteinander (<Term word="Peer-to-Peer" def="Eine direkte Kommunikation zwischen Geräten im selben Netz, bei der kein Router den Weg ins Internet suchen muss."/>). <br/><br/>
-                    <strong>Was verändert sich, wenn eine Nachricht nicht innerhalb des lokalen Netzwerks versendet wird (z. B. über das Internet)?</strong><br/>
-                    Während die logische IP-Adresse immer das endgültige Ziel (Ende-zu-Ende) angibt, arbeitet die Netzzugangsschicht (MAC-Adresse) nur schrittweise von Gerät zu Gerät (<Term word="Hop-by-Hop" def="Der schrittweise Weg eines Pakets, bei dem jeder Zwischenstopp (z. B. ein Router) den MAC-Header durch einen neuen ersetzt."/>).
-                </span>
-                <br/>
-                Nutze nun die folgenden <strong>Missionsdaten</strong>, um die Header in den nächsten Schritten korrekt auszufüllen:
+                {word}
             </span>
-        </div>
-        <div className="grid grid-cols-2 gap-8">
-            <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-center">
-                <span className="text-slate-500 font-mono-term text-xs mb-3 uppercase tracking-widest">Dein PC (Sender)</span>
-                <span className="font-mono-term text-lg text-slate-200 block mb-2">IP: <span className="text-orange-300">192.168.1.10</span></span>
-                <span className="font-mono-term text-lg text-slate-200 block">MAC: <span className="text-emerald-300">00:1A:2B:3C:4D:5E</span></span>
-            </div>
-            <div className="bg-blue-950/20 p-5 rounded-xl border border-blue-900/50 flex flex-col justify-center shadow-inner">
-                <span className="text-blue-400 font-mono-term text-xs mb-3 uppercase tracking-widest">PC des Freundes (Empfänger)</span>
-                <span className="font-mono-term text-lg text-slate-200 block mb-2">IP: <span className="text-orange-300">192.168.1.22</span></span>
-                <span className="font-mono-term text-lg text-slate-200 block mb-2">MAC: <span className="text-emerald-300">FF:EE:DD:AA:BB:CC</span></span>
-                <span className="font-mono-term text-lg text-slate-200 block">App: <span className="text-purple-300">SecureChat (Port 443)</span></span>
-            </div>
-        </div>
-    </div>
-);
+        );
 
-const TheoryPanel = ({ levelId }) => {
-    const data = THEORY[levelId];
-    if (!data) return null;
+        const THEORY = {
+            1: {
+                title: "Anwendungsschicht",
+                getTask: () => <>Bildet die direkte Schnittstelle zum Nutzer. Sie wandelt Eingaben aus einem Programm (z.B. Chat-App, Browser) in zu versendende <Term word="Nutzdaten (Payload)" def="Die reinen Daten, also die eigentliche Nachricht, das Bild oder die Datei, ohne Steuerungsinformationen."/> um.</>,
+                getHeaderFunction: () => <>Der <strong>Anwendungs-Header</strong> teilt der Empfänger-App (<Term word="Client/Server" def="Client = anfragendes Gerät, Server = bereitstellendes Programm."/>) mit, um welches Datenformat es sich handelt (z.B. verschlüsselter Chat) und wie es interpretiert werden muss.</>,
+                protocols: <><Term word="HTTPS" def="Hypertext Transfer Protocol Secure: Zur verschlüsselten Übertragung von Web-Inhalten."/>, <Term word="SMTP" def="Simple Mail Transfer Protocol: Protokoll für E-Mails."/></>,
+                blueprint: "Protokoll: HTTPS\nDaten: Verschlüsselt"
+            },
+            2: {
+                title: "Transportschicht",
+                getTask: () => <>Sorgt für die logische Ende-zu-Ende Verbindung zwischen den Anwendungen. Sie zerteilt zu große Daten in netzwerktaugliche Stücke (<Term word="Segmentierung" def="Das Zerteilen einer großen Nachricht in mehrere kleine Segmente, die die maximale Übertragungsgröße (MTU) nicht überschreiten."/>).</>,
+                getHeaderFunction: () => <>Die <strong>Ports</strong> im Header ordnen die Daten auf dem Zielgerät der exakt richtigen App zu (<Term word="Multiplexing" def="Die Zuordnung von eingehenden Datenpaketen zu den jeweiligen Programmen auf einem Gerät anhand von Portnummern."/>). <strong>Sequenznummern</strong> sichern die korrekte Reihenfolge beim Empfänger.</>,
+                protocols: <><Term word="TCP" def="Transmission Control Protocol: Sehr zuverlässig, korrigiert Fehler und garantiert die Reihenfolge."/>, <Term word="UDP" def="User Datagram Protocol: Sehr schnell, aber unzuverlässig (z.B. für Livestreams)."/></>,
+                blueprint: "Ziel-Port: [Port der Ziel-App]\nQuell-Port: [Dein Port]\nSequenznummern\nweitere Steuerdaten"
+            },
+            3: {
+                title: "Internetschicht",
+                getTask: () => <>Übernimmt das weltweite <Term word="Routing" def="Die Wegfindung von Datenpaketen über verschiedene Netzknoten hinweg zum Ziel."/>. Diese Schicht sorgt dafür, dass Pakete über verschiedene Netze hinweg ihr finales Ziel finden.</>,
+                getHeaderFunction: () => <>Die <Term word="IP-Adressen" def="Internet Protocol: Die logische Adresse, die jedem Gerät im Netzwerk zugewiesen wird."/> im Header dienen der eindeutigen, netzwerkübergreifenden Adressierung von Sender und Empfänger. Sie verändern sich auf der gesamten Reise <strong>nicht</strong>.</>,
+                protocols: <><Term word="IPv4 / IPv6" def="Internet Protocol: Die Standardprotokolle zur logischen Adressierung."/>, <Term word="ICMP" def="Internet Control Message Protocol: Wird für Fehlermeldungen (z.B. Ping) genutzt."/></>,
+                blueprint: "Ziel-IP: [IP des Empfängers]\nQuell-IP: [Deine IP]\nweitere Steuerdaten"
+            },
+            4: {
+                title: "Netzzugangsschicht",
+                getTask: () => <>Übernimmt die physikalische Signalübertragung im direkten, lokalen Netzwerk (z.B. Kabel oder <Term word="WLAN" def="Wireless Local Area Network: Dein lokales, kabelloses Funknetz."/>) zum nächsten Nachbargerät.</>,
+                getHeaderFunction: () => <>Die <Term word="MAC-Adressen" def="Media Access Control: Die weltweit einmalige, fest eingebrannte Hardware-Adresse deiner Netzwerkkarte."/> im Header adressieren die Netzwerkkarten direkt. Ein zusätzlich generierter <strong>Trailer (<Term word="FCS" def="Frame Check Sequence: Eine Prüfsumme am Ende des Frames."/>)</strong> dient der Fehlererkennung auf dem Kabel.</>,
+                protocols: <>Ethernet, Wi-Fi, <Term word="ARP" def="Address Resolution Protocol: Übersetzt IP-Adressen in lokale MAC-Adressen."/></>,
+                blueprint: "Ziel-MAC: [MAC des Empfängers]\nQuell-MAC: [Deine MAC]\nweitere Steuerdaten\nTrailer: FCS (Fehlerprüfung)"
+            }
+        };
 
-    return (
-        <div className="panel-container w-full lg:w-[40%] flex flex-col border-l-4 border-blue-500">
-            <div className="panel-header flex items-center gap-4 p-5">
-                <div className="w-12 h-12 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xl">{levelId}</div>
-                <h2 className="text-2xl font-bold text-white leading-tight">{data.title}</h2>
-            </div>
-            
-            <div className="panel-body flex flex-col gap-6 p-6">
-                <div>
-                    <strong className="text-white block text-sm uppercase tracking-widest mb-2 text-cyan-400"><Target size={18} className="inline mr-2"/> Aufgabe der Schicht</strong>
-                    <span className="text-lg leading-relaxed text-slate-200 block bg-slate-800/50 p-4 rounded-xl border border-slate-700">{data.getTask()}</span>
-                </div>
+        const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
+            const baseStyle = "px-6 py-3 rounded-lg font-bold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 text-base uppercase tracking-wider relative group";
+            const variants = {
+                primary: "bg-blue-600 hover:bg-blue-500 text-white shadow-lg disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none",
+                success: "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none",
+                outline: "border-2 border-slate-500 hover:border-blue-400 hover:bg-blue-900/30 text-slate-300 hover:text-blue-300 disabled:border-slate-800 disabled:text-slate-600"
+            };
+            return (
+                <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${disabled ? 'cursor-not-allowed' : ''} ${className}`}>
+                    {children}
+                </button>
+            );
+        };
 
-                <div>
-                    <strong className="text-white block text-sm uppercase tracking-widest mb-2 text-yellow-400"><Layers size={18} className="inline mr-2"/> Funktion der Header</strong>
-                    <span className="text-lg leading-relaxed text-slate-200 block bg-slate-800/50 p-4 rounded-xl border border-slate-700">{data.getHeaderFunction()}</span>
-                </div>
-                
-                <div>
-                    <strong className="text-white block text-sm uppercase tracking-widest mb-2 text-slate-400"><ListChecks size={18} className="inline mr-2"/> Typische Protokolle</strong>
-                    <div className="text-lg font-mono-term text-slate-300 bg-slate-900 p-4 rounded-xl border border-slate-700">
-                        {data.protocols}
-                    </div>
-                </div>
-
-                <div className="mt-auto pt-4 border-t border-slate-700">
-                    <strong className="text-white flex items-center gap-2 text-sm uppercase tracking-widest mb-3 text-slate-400">
-                        <FileText size={18} /> Header-Aufbau (Zusammenfassung)
-                    </strong>
-                    <div className="text-base text-slate-300 bg-slate-900 p-5 rounded-xl border border-slate-700 font-mono-term whitespace-pre-wrap shadow-inner leading-relaxed">
-                        {data.blueprint}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const Level1Application = ({ onComplete, setGlobalMessage, addLog }) => {
-    const [msg, setMsg] = useState("");
-    const [stamped, setStamped] = useState(false);
-    const [feedback, setFeedback] = useState(null);
-
-    useEffect(() => { addLog("System: Warte auf Nutzer-Payload..."); }, []);
-
-    const handleAction = () => {
-        if (msg.trim().length < 3) {
-            addLog("[ERROR] Nachricht zu kurz.", "error");
-            return setFeedback({ type: 'error', text: "Bitte gib eine sinnvolle Nachricht ein." });
-        }
-        setGlobalMessage(msg);
-        setStamped(true);
-        addLog(`Nutzdaten (Payload) erstellt: "${msg}"`);
-        addLog("[OK] Daten für Netzwerkübergabe vorbereitet.", "success");
-        setFeedback({ type: 'success', text: "Nutzdaten generiert! Wir können die Kapselung beginnen." });
-    };
-
-    return (
-        <div className={`panel-container w-full lg:w-[60%] ${stamped ? 'flash-success' : ''}`}>
-            <div className="panel-header text-cyan-400 font-mono-term text-lg p-5">
-                <Terminal size={20} className="inline mr-3"/> ANWENDUNG_CLIENT
-            </div>
-            <div className="panel-body flex flex-col p-6">
-                <h3 className="font-bold text-white text-2xl mb-4">Schritt 1: Nachricht verfassen</h3>
-                <p className="text-lg text-slate-300 mb-6 leading-relaxed">Erstelle die eigentlichen Nutzdaten (<Term word="Payload" def="Die reinen Nutzdaten, also die eigentliche Nachricht oder Datei, ohne Steuerungsinformationen."/>), die über die Chat-App an deinen Freund versendet werden sollen.</p>
-                <textarea 
-                    className="w-full flex-1 min-h-[150px] bg-slate-900 border border-slate-700 p-5 text-cyan-300 font-mono-term text-lg rounded-xl focus:border-cyan-500 focus:outline-none shadow-inner"
-                    placeholder="Tippe deine Nachricht hier..."
-                    value={msg} onChange={(e) => setMsg(e.target.value)} disabled={stamped}
-                />
-            </div>
-            <div className="panel-footer p-5">
-                <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
-                {!stamped ? 
-                    <Button onClick={handleAction} className="w-full py-4 text-lg">NUTZDATEN ERSTELLEN</Button> : 
-                    <Button onClick={onComplete} className="w-full py-4 text-lg bg-slate-700 hover:bg-slate-600">Weiter zur Transportschicht <ArrowRight size={20}/></Button>
+        const FeedbackToast = ({ text, type, onClear }) => {
+            useEffect(() => {
+                if (text) {
+                    const timer = setTimeout(() => {
+                        onClear();
+                    }, 4000);
+                    return () => clearTimeout(timer);
                 }
-            </div>
-        </div>
-    );
-};
+            }, [text, onClear]);
 
-const Level2Transport = ({ onComplete, addLog, originalMessage }) => {
-    const [cut, setCut] = useState(false);
-    const [tool, setTool] = useState(null);
-    const [segs, setSegs] = useState([{id:1, port:false, seq:null}, {id:2, port:false, seq:null}, {id:3, port:false, seq:null}]);
-    const [feedback, setFeedback] = useState(null);
+            if (!text) return null;
+            const isError = type === 'error';
+            return (
+                <div className={`p-4 rounded-lg mb-4 flex items-start gap-4 text-base border-l-4 shadow-lg fade-in ${isError ? 'bg-red-950/80 border-red-500 text-red-200' : 'bg-emerald-950/80 border-emerald-500 text-emerald-200'}`}>
+                    {isError ? <AlertCircle className="shrink-0 text-red-500 mt-1" size={20}/> : <CheckCircle2 className="shrink-0 text-emerald-500 mt-1" size={20}/>}
+                    <span dangerouslySetInnerHTML={{ __html: text }} className="leading-relaxed" />
+                </div>
+            );
+        };
 
-    useEffect(() => {
-        addLog("System: Daten von Applikation erhalten.");
-        addLog("[WARN] Payload überschreitet Netz-MTU. Zerschneiden (Segmentierung) erforderlich.", "warn");
-    }, []);
-
-    const handleCut = () => {
-        setCut(true);
-        addLog("Führe Daten-Segmentierung durch...");
-        setTimeout(() => addLog("Payload in 3 Segmente zerschnitten. Warte auf Header-Zuweisung."), 500);
-    }
-
-    const handleSegClick = (idx) => {
-        if (!tool) {
-            addLog("[ERROR] Kein Header-Attribut ausgewählt.", "error");
-            return setFeedback({ type: 'error', text: "Wähle zuerst unten ein Attribut (Port/Seq)!" });
-        }
-        let newSegs = [...segs];
-        const blockEl = document.getElementById(`seg-${idx}`);
-
-        if (tool.startsWith('port')) {
-            if (tool !== 'port443') {
-                addLog(`[ERROR] Port ${tool.replace('port','')} ist inkorrekt für die App.`, "error");
-                if(blockEl) { blockEl.classList.remove('shake'); void blockEl.offsetWidth; blockEl.classList.add('shake'); }
-                if(tool === 'port80') return setFeedback({ type: 'error', text: "Port 80 ist für unverschlüsseltes HTTP. Prüfe die Missionsdaten für den richtigen Dienst!" });
-                if(tool === 'port25') return setFeedback({ type: 'error', text: "Port 25 ist für E-Mail (SMTP). Prüfe die Missionsdaten für den richtigen Dienst!" });
-                return setFeedback({ type: 'error', text: "Falscher Ziel-Port! Schau in die Missionsdaten." });
-            }
-            if(!newSegs[idx].port) addLog(`[TCP] Dest-Port 443 (HTTPS) an Block ${newSegs[idx].id} gebunden.`);
-            newSegs[idx].port = true;
-        } else {
-            const sNum = parseInt(tool.replace('s',''));
-            if (newSegs.some(s => s.seq === sNum && s.id !== newSegs[idx].id)) {
-                addLog(`[ERROR] Sequenznummer ${sNum} Konflikt.`, "error");
-                if(blockEl) { blockEl.classList.remove('shake'); void blockEl.offsetWidth; blockEl.classList.add('shake'); }
-                return setFeedback({ type: 'error', text: "Kollision! Jedes Segment braucht eine EINDEUTIGE Sequenznummer für den späteren Zusammenbau." });
-            }
-            if(newSegs[idx].seq !== sNum) addLog(`[TCP] Seq-No ${sNum} an Block ${newSegs[idx].id} angehängt.`);
-            newSegs[idx].seq = sNum;
-        }
-        
-        setSegs(newSegs); setTool(null); setFeedback(null);
-
-        if (newSegs.every(s => s.port && s.seq)) {
-            addLog("[OK] TCP-Header für alle Segmente konfiguriert.", "success");
-            setFeedback({ type: 'success', text: "Korrekt! Port 443 verweist auf die sichere Chat-App deines Freundes. Die Sequenznummern garantieren die richtige Reihenfolge beim Zusammensetzen." });
-        }
-    };
-
-    const isDone = segs.every(s => s.port && s.seq);
-
-    return (
-        <div className={`panel-container w-full lg:w-[60%] transition-all duration-300 ${isDone ? 'flash-success' : ''}`}>
-            <div className="panel-header text-purple-400 font-mono-term text-lg p-5">
-                <Terminal size={20} className="inline mr-3"/> TRANSPORT_MODUL
-            </div>
+        const SystemTerminal = ({ logs }) => {
+            const containerRef = useRef(null);
             
-            <div className="panel-body flex flex-col p-6">
-                <h3 className="font-bold text-white text-2xl mb-4">Schritt 2: {cut ? "Prozessadressierung & Reihenfolge" : "Segmentierung"}</h3>
-                
-                {!cut ? (
-                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-900/50 rounded-xl border border-slate-700 p-8">
-                        <p className="text-lg text-slate-300 mb-8 text-center leading-relaxed max-w-lg">
-                            Unsere Nachricht ist zu groß für das Netzwerk und muss zerteilt werden (<Term word="Segmentierung" def="Das Zerteilen einer großen Nachricht in mehrere kleine Segmente, die die maximale Übertragungsgröße (MTU) nicht überschreiten."/>).
-                        </p>
-                        <div className="w-full min-h-[6rem] mb-10 bg-cyan-950/30 border-2 border-dashed border-cyan-500/50 flex flex-col items-center justify-center text-cyan-400 font-mono-term text-lg p-4 shadow-inner rounded-lg">
-                            <span className="break-words text-center">"{originalMessage || "Test-Nachricht"}"</span>
+            useEffect(() => { 
+                if (containerRef.current) {
+                    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                }
+            }, [logs]);
+
+            return (
+                <div className="panel-container w-full h-full max-h-[300px]">
+                    <div className="panel-header py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-slate-400">
+                            <Terminal size={18}/>
+                            <span className="text-sm font-mono-term font-bold uppercase tracking-widest">System Log</span>
                         </div>
-                        <Button onClick={handleCut} variant="outline" className="py-4 px-8 text-lg"><Scissors size={24} className="mr-3"/> Daten in Segmente zerschneiden</Button>
                     </div>
-                ) : (
-                    <div className="flex-1 flex flex-col bg-slate-900/50 rounded-xl border border-slate-700 p-6 fade-in">
-                        <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-                            Schau in die <strong className="text-blue-300">Missionsdaten</strong>: Über welchen Dienst läuft die Chat-App des Freundes? Welcher <strong>Ziel-Port</strong> gehört dazu? Adressiere jedes Segment damit und sichere die Reihenfolge durch <Term word="Sequenznummern" def="Eine fortlaufende Nummer, durch die der Empfänger die Segmente am Ende wieder wie ein Puzzle in der korrekten Reihenfolge zusammensetzen kann."/>.
-                        </p>
-                        <div className="flex justify-center gap-5 flex-1 items-center mb-8">
-                            {segs.map((s, i) => (
-                                <div key={s.id} id={`seg-${i}`} onClick={() => handleSegClick(i)} className={`flex-1 max-w-[120px] h-36 border-2 border-dashed rounded-xl bg-slate-900 flex flex-col p-2 cursor-pointer transition-all duration-200 hover:-translate-y-2 ${tool ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-slate-600'} ${s.port && s.seq ? 'border-emerald-500/50 bg-emerald-950/20' : ''}`}>
-                                    <div className="text-center text-xs font-mono-term text-slate-400 mb-auto border-b border-slate-800 pb-2 pt-1">DATEN {s.id}</div>
-                                    {s.port && <div className="bg-purple-950/80 border border-purple-500/50 text-purple-300 text-xs font-mono-term py-2 rounded-lg text-center mb-2">PORT 443</div>}
-                                    {s.seq && <div className="bg-purple-950/80 border border-purple-500/50 text-purple-300 text-xs font-mono-term py-2 rounded-lg text-center">SEQ 0{s.seq}</div>}
+                    <div 
+                        ref={containerRef}
+                        className="panel-body bg-[#020617] p-4 font-mono-term text-[13px] space-y-2 text-slate-300 overflow-y-auto scroll-smooth"
+                    >
+                        {logs.map((log, i) => (
+                            <div key={i} className={`flex gap-4 leading-relaxed fade-in ${log.type === 'error' ? 'text-red-400 font-bold' : log.type === 'success' ? 'text-emerald-400' : log.type === 'warn' ? 'text-yellow-400' : ''}`}>
+                                <span className="opacity-50 shrink-0">[{log.time}]</span>
+                                <span dangerouslySetInnerHTML={{ __html: log.msg }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const GlobalTooltip = () => {
+            const [tooltip, setTooltip] = useState({ text: '', visible: false, rect: null });
+
+            useEffect(() => {
+                const handleShow = (e) => setTooltip({ text: e.detail.text, visible: true, rect: e.detail.rect });
+                const handleHide = () => setTooltip(p => ({ ...p, visible: false }));
+                
+                window.addEventListener('show-tooltip', handleShow);
+                window.addEventListener('hide-tooltip', handleHide);
+                
+                return () => {
+                    window.removeEventListener('show-tooltip', handleShow);
+                    window.removeEventListener('hide-tooltip', handleHide);
+                };
+            }, []);
+
+            if (!tooltip.visible || !tooltip.rect) return null;
+
+            const { rect } = tooltip;
+            const x = rect.left + rect.width / 2;
+            let y = rect.top - 12;
+            let transform = 'translate(-50%, -100%)';
+            let arrowClass = 'border-t-slate-800';
+            let arrowStyle = { top: '100%' };
+
+            if (rect.top < 150) {
+                y = rect.bottom + 12;
+                transform = 'translate(-50%, 0)';
+                arrowClass = 'border-b-slate-800';
+                arrowStyle = { bottom: '100%' };
+            }
+
+            return (
+                <div 
+                    className="fixed z-[99999] pointer-events-none fade-in"
+                    style={{ left: x, top: y, transform }}
+                >
+                    <div className="w-80 p-5 bg-slate-800 text-base text-slate-100 border border-slate-600 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] leading-relaxed text-center font-sans font-normal relative">
+                        {tooltip.text}
+                        <div className={`absolute left-1/2 -translate-x-1/2 border-8 border-transparent ${arrowClass}`} style={arrowStyle}></div>
+                    </div>
+                </div>
+            );
+        };
+
+        const EncapsulationTracker = ({ activeLevel }) => {
+            const segments = activeLevel === 1 ? [1] : [1, 2, 3];
+
+            return (
+                <div className="panel-container w-full h-full max-h-[300px] flex flex-col">
+                    <div className="panel-header py-3 border-b border-slate-700/80">
+                        <h3 className="text-sm font-bold font-mono-term text-blue-400 flex items-center gap-2 uppercase tracking-widest">
+                            <Activity size={18}/> Live Paket-Sniffer (Raw)
+                        </h3>
+                    </div>
+                    <div className="panel-body flex flex-col justify-center gap-5 bg-[#0a0a0a] p-6 overflow-x-auto overflow-y-hidden relative h-full">
+                        <div className="absolute inset-0 opacity-[0.03] font-mono-term text-xs leading-tight overflow-hidden select-none pointer-events-none break-all text-emerald-500">
+                            {Array(400).fill("0A 1F B3 44 E2 00 11 ").join("")}
+                        </div>
+                        
+                        {segments.map((segId) => (
+                            <div key={segId} className="flex items-stretch font-mono-term text-[13px] shadow-2xl border border-slate-700/50 rounded-lg overflow-hidden relative z-10 fade-in h-16 w-max mx-auto md:mx-0 shrink-0">
+                                {activeLevel >= 4 && (
+                                    <div className="bg-emerald-900/80 text-emerald-200 px-5 flex flex-col items-center justify-center border-r border-emerald-950/50">
+                                        <span className="font-bold tracking-widest">MAC</span>
+                                        <span className="text-[10px] opacity-70">HEADER</span>
+                                    </div>
+                                )}
+                                {activeLevel >= 3 && (
+                                    <div className="bg-orange-900/80 text-orange-200 px-5 flex flex-col items-center justify-center border-r border-orange-950/50">
+                                        <span className="font-bold tracking-widest">IP</span>
+                                        <span className="text-[10px] opacity-70">HEADER</span>
+                                    </div>
+                                )}
+                                {activeLevel >= 2 && (
+                                    <div className="bg-purple-900/80 text-purple-200 px-5 flex flex-col items-center justify-center border-r border-purple-950/50">
+                                        <span className="font-bold tracking-widest">TCP</span>
+                                        <span className="text-[10px] opacity-70">HEADER</span>
+                                    </div>
+                                )}
+                                <div className="bg-cyan-900/80 text-cyan-100 px-8 flex flex-col items-center justify-center min-w-[120px]">
+                                    <span className="font-bold tracking-widest">DATA</span>
+                                    <span className="text-[10px] opacity-70">SEGMENT_0{segId}</span>
                                 </div>
-                            ))}
+                                {activeLevel >= 4 && (
+                                    <div className="bg-slate-800 text-slate-300 px-3 flex flex-col items-center justify-center border-l border-slate-700/50">
+                                        <span className="font-bold tracking-widest text-[10px]">FCS</span>
+                                        <span className="text-[8px] opacity-70">TRAILER</span>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const NetworkContextInfo = () => (
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 flex flex-col gap-4 shadow-xl mb-6">
+                <div className="text-lg text-slate-300 flex items-start gap-4 border-b border-slate-700 pb-4">
+                    <Network size={32} className="text-blue-400 shrink-0 mt-1"/>
+                    <span className="leading-relaxed">
+                        <strong className="text-blue-400 uppercase tracking-widest text-sm block mb-1">Szenario & Missionsdaten:</strong>
+                        Stell dir vor, du möchtest eine Nachricht von deinem Computer an den Computer deines Freundes senden, der sich <strong>im gleichen Raum (lokales Netzwerk)</strong> befindet. 
+                        <br/><br/>
+                        <span className="text-base text-slate-400 border-l-4 border-emerald-600/50 pl-4 py-2 block bg-slate-950/50 rounded-r-lg">
+                            <strong className="text-emerald-400">Info:</strong> Da ihr euch im selben Netzwerk befindet, kommuniziert ihr hier direkt miteinander (<Term word="Peer-to-Peer" def="Eine direkte Kommunikation zwischen Geräten im selben Netz, bei der kein Router den Weg ins Internet suchen muss."/>). <br/><br/>
+                            <strong>Was verändert sich, wenn eine Nachricht nicht innerhalb des lokalen Netzwerks versendet wird (z. B. über das Internet)?</strong><br/>
+                            Während die logische IP-Adresse immer das endgültige Ziel (Ende-zu-Ende) angibt, arbeitet die Netzzugangsschicht (MAC-Adresse) nur schrittweise von Gerät zu Gerät (<Term word="Hop-by-Hop" def="Der schrittweise Weg eines Pakets, bei dem jeder Zwischenstopp (z. B. ein Router) den MAC-Header durch einen neuen ersetzt."/>).
+                        </span>
+                        <br/>
+                        Nutze nun die folgenden <strong>Missionsdaten</strong>, um die Header in den nächsten Schritten korrekt auszufüllen:
+                    </span>
+                </div>
+                <div className="grid grid-cols-2 gap-8">
+                    <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col justify-center">
+                        <span className="text-slate-500 font-mono-term text-xs mb-3 uppercase tracking-widest">Dein PC (Sender)</span>
+                        <span className="font-mono-term text-lg text-slate-200 block mb-2">IP: <span className="text-orange-300">192.168.1.10</span></span>
+                        <span className="font-mono-term text-lg text-slate-200 block">MAC: <span className="text-emerald-300">00:1A:2B:3C:4D:5E</span></span>
+                    </div>
+                    <div className="bg-blue-950/20 p-5 rounded-xl border border-blue-900/50 flex flex-col justify-center shadow-inner">
+                        <span className="text-blue-400 font-mono-term text-xs mb-3 uppercase tracking-widest">PC des Freundes (Empfänger)</span>
+                        <span className="font-mono-term text-lg text-slate-200 block mb-2">IP: <span className="text-orange-300">192.168.1.22</span></span>
+                        <span className="font-mono-term text-lg text-slate-200 block mb-2">MAC: <span className="text-emerald-300">FF:EE:DD:AA:BB:CC</span></span>
+                        <span className="font-mono-term text-lg text-slate-200 block">App: <span className="text-purple-300">SecureChat (Port 443)</span></span>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const TheoryPanel = ({ levelId }) => {
+            const data = THEORY[levelId];
+            if (!data) return null;
+
+            return (
+                <div className="panel-container w-full lg:w-[40%] flex flex-col border-l-4 border-blue-500">
+                    <div className="panel-header flex items-center gap-4 p-5">
+                        <div className="w-12 h-12 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xl">{levelId}</div>
+                        <h2 className="text-2xl font-bold text-white leading-tight">{data.title}</h2>
+                    </div>
+                    
+                    <div className="panel-body flex flex-col gap-6 p-6">
+                        <div>
+                            <strong className="text-white block text-sm uppercase tracking-widest mb-2 text-cyan-400"><Target size={18} className="inline mr-2"/> Aufgabe der Schicht</strong>
+                            <span className="text-lg leading-relaxed text-slate-200 block bg-slate-800/50 p-4 rounded-xl border border-slate-700">{data.getTask()}</span>
                         </div>
-                        <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-wrap gap-3 justify-center shrink-0">
-                            <Button variant={tool==='port80'?'primary':'outline'} onClick={()=>setTool('port80')} className="text-sm py-2 px-4">Port 80 (HTTP)</Button>
-                            <Button variant={tool==='port443'?'primary':'outline'} onClick={()=>setTool('port443')} className="text-sm py-2 px-4">Port 443 (HTTPS)</Button>
-                            <Button variant={tool==='port25'?'primary':'outline'} onClick={()=>setTool('port25')} className="text-sm py-2 px-4">Port 25 (SMTP)</Button>
-                            <div className="w-px h-full bg-slate-700 mx-2"></div>
-                            {[1,2,3].map(n => <Button key={n} variant={tool===`s${n}`?'primary':'outline'} onClick={()=>setTool(`s${n}`)} disabled={segs.some(s=>s.seq===n) && !tool} className="text-sm py-2 px-4">Seq 0{n}</Button>)}
+
+                        <div>
+                            <strong className="text-white block text-sm uppercase tracking-widest mb-2 text-yellow-400"><Layers size={18} className="inline mr-2"/> Funktion der Header</strong>
+                            <span className="text-lg leading-relaxed text-slate-200 block bg-slate-800/50 p-4 rounded-xl border border-slate-700">{data.getHeaderFunction()}</span>
+                        </div>
+                        
+                        <div>
+                            <strong className="text-white block text-sm uppercase tracking-widest mb-2 text-slate-400"><ListChecks size={18} className="inline mr-2"/> Typische Protokolle</strong>
+                            <div className="text-lg font-mono-term text-slate-300 bg-slate-900 p-4 rounded-xl border border-slate-700">
+                                {data.protocols}
+                            </div>
+                        </div>
+
+                        <div className="mt-auto pt-4 border-t border-slate-700">
+                            <strong className="text-white flex items-center gap-2 text-sm uppercase tracking-widest mb-3 text-slate-400">
+                                <FileText size={18} /> Header-Aufbau (Zusammenfassung)
+                            </strong>
+                            <div className="text-base text-slate-300 bg-slate-900 p-5 rounded-xl border border-slate-700 font-mono-term whitespace-pre-wrap shadow-inner leading-relaxed">
+                                {data.blueprint}
+                            </div>
                         </div>
                     </div>
-                )}
-            </div>
-
-            <div className="panel-footer p-5 flex flex-col">
-                <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
-                <div className="flex justify-end mt-auto">
-                    {isDone && <Button variant="primary" onClick={onComplete} className="w-full py-4 text-lg animate-pulse">Weiter zur Internetschicht <ArrowRight size={20}/></Button>}
                 </div>
-            </div>
-        </div>
-    );
-};
+            );
+        };
 
-const Level3Internet = ({ onComplete, addLog }) => {
-    const [step, setStep] = useState(1);
-    const [srcIp, setSrcIp] = useState(null);
-    const [dstIp, setDstIp] = useState(null);
-    const [packed, setPacked] = useState(false);
-    const [feedback, setFeedback] = useState(null);
-    
-    const targetSrcIp = "192.168.1.10";
-    const targetDstIp = "192.168.1.22";
+        const Level1Application = ({ onComplete, setGlobalMessage, addLog }) => {
+            const [msg, setMsg] = useState("");
+            const [stamped, setStamped] = useState(false);
+            const [feedback, setFeedback] = useState(null);
 
-    useEffect(() => { addLog("System: 3 TCP-Segmente empfangen. Erwarte IP-Adressierung..."); }, []);
+            useEffect(() => { addLog("System: Warte auf Nutzer-Payload..."); }, []);
 
-    const handleSrcSelect = (ip) => {
-        if (ip !== targetSrcIp) {
-            addLog("[ERROR] Falsche Quell-IP.", "error");
-            return setFeedback({type:'error', text:'Falscher Absender! Schau in die Missionsdaten: Welche IP hat dein eigener PC?'});
-        }
-        setSrcIp(ip);
-        setFeedback(null);
-        setStep(2);
-        addLog(`> Quell-IP korrekt gesetzt: ${ip}`);
-    };
-
-    const handleDstSelect = (ip) => {
-        if (ip !== targetDstIp) {
-            addLog("[ERROR] Falsche Ziel-IP.", "error");
-            return setFeedback({type:'error', text:'Falscher Empfänger! Die IP-Adresse ist wie der Name auf einem Brief – sie muss das finale Ziel (den PC des Freundes) benennen.'});
-        }
-        setDstIp(ip);
-        setFeedback(null);
-        setStep(3);
-        addLog(`> Ziel-IP korrekt gesetzt: ${ip}`);
-    };
-
-    const handlePack = () => {
-        setPacked(true); 
-        addLog(`[IP] L3 Header generiert. Src-IP: ${srcIp} -> Dst-IP: ${dstIp}.`, "success");
-        addLog("[OK] Alle 3 Segmente in IP-Pakete gekapselt.", "success");
-        setFeedback({type:'success', text:'Korrekt! Die logischen Absender- und Empfänger-IPs sind vergeben. Die Pakete sind weltweit adressiert.'});
-    };
-
-    return (
-        <div className={`panel-container w-full lg:w-[60%] ${packed ? 'flash-success' : ''}`}>
-            <div className="panel-header text-orange-400 font-mono-term text-lg p-5">
-                <Terminal size={20} className="inline mr-3"/> IP_ROUTING
-            </div>
-            <div className="panel-body flex flex-col p-6">
-                <h3 className="font-bold text-white text-2xl mb-4">Schritt 3: Logische Adressierung</h3>
-                <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-                    Die logische Adressierung (<Term word="IP-Adresse" def="Internet Protocol: Die logische Adresse eines Geräts im Netzwerk."/>) adressiert die Computer auf logischer Ebene. <br/>
-                    Nutze die <strong className="text-blue-300">Missionsdaten</strong> für die nächsten Schritte:
-                </p>
-                
-                <div className="space-y-6 mt-2">
-                    {step === 1 && (
-                        <div className="fade-in">
-                            <span className="text-sm text-slate-400 block mb-4">Schritt 3.1: Wähle die <strong>Quell-IP</strong> (Wer ist der Absender?):</span>
-                            <div className="space-y-3">
-                                <button onClick={()=>handleSrcSelect("192.168.1.1")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">192.168.1.1</button>
-                                <button onClick={()=>handleSrcSelect(targetDstIp)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">{targetDstIp}</button>
-                                <button onClick={()=>handleSrcSelect(targetSrcIp)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">{targetSrcIp}</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {step >= 2 && (
-                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
-                            <div>
-                                <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Quell-IP (Absender)</span>
-                                <span className="font-mono-term text-xl text-orange-400">{srcIp}</span>
-                            </div>
-                            <CheckCircle2 className="text-emerald-500" size={24} />
-                        </div>
-                    )}
-
-                    {step === 2 && (
-                        <div className="fade-in">
-                            <span className="text-sm text-slate-400 block mb-4 mt-6">Schritt 3.2: Wähle nun die <strong>Ziel-IP</strong> (Wer soll es erhalten?):</span>
-                            <div className="space-y-3">
-                                <button onClick={()=>handleDstSelect("10.0.0.1")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">10.0.0.1</button>
-                                <button onClick={()=>handleDstSelect(targetDstIp)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">{targetDstIp}</button>
-                                <button onClick={()=>handleDstSelect("192.168.1.1")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">192.168.1.1</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 3 && (
-                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
-                            <div>
-                                <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Ziel-IP (Empfänger)</span>
-                                <span className="font-mono-term text-xl text-orange-400">{dstIp}</span>
-                            </div>
-                            <CheckCircle2 className="text-emerald-500" size={24} />
-                        </div>
-                    )}
-                </div>
-            </div>
-            <div className="panel-footer p-5">
-                <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
-                {step === 3 && !packed ? 
-                    <Button onClick={handlePack} className="w-full py-4 text-lg !bg-orange-600 hover:!bg-orange-500">IP-HEADER ANFÜGEN</Button> 
-                    : null
+            const handleAction = () => {
+                if (msg.trim().length < 3) {
+                    addLog("[ERROR] Nachricht zu kurz.", "error");
+                    return setFeedback({ type: 'error', text: "Bitte gib eine sinnvolle Nachricht ein." });
                 }
-                {packed && (
-                    <Button onClick={onComplete} className="w-full py-4 text-lg bg-slate-700">Weiter zur Netzzugangsschicht <ArrowRight size={20}/></Button>
-                )}
-            </div>
-        </div>
-    );
-};
+                setGlobalMessage(msg);
+                setStamped(true);
+                addLog(`Nutzdaten (Payload) erstellt: "${msg}"`);
+                addLog("[OK] Daten für Netzwerkübergabe vorbereitet.", "success");
+                setFeedback({ type: 'success', text: "Nutzdaten generiert! Wir können die Kapselung beginnen." });
+            };
 
-const Level4Network = ({ onComplete, addLog }) => {
-    const [step, setStep] = useState(1);
-    const [srcMac, setSrcMac] = useState(null);
-    const [dstMac, setDstMac] = useState(null);
-    const [hasFcs, setHasFcs] = useState(false);
-    const [status, setStatus] = useState('idle');
-    const [feedback, setFeedback] = useState(null);
-    
-    const targetSrcMac = "00:1A:2B:3C:4D:5E";
-    const friendMac = "FF:EE:DD:AA:BB:CC";
+            return (
+                <div className={`panel-container w-full lg:w-[60%] ${stamped ? 'flash-success' : ''}`}>
+                    <div className="panel-header text-cyan-400 font-mono-term text-lg p-5">
+                        <Terminal size={20} className="inline mr-3"/> ANWENDUNG_CLIENT
+                    </div>
+                    <div className="panel-body flex flex-col p-6">
+                        <h3 className="font-bold text-white text-2xl mb-4">Schritt 1: Nachricht verfassen</h3>
+                        <p className="text-lg text-slate-300 mb-6 leading-relaxed">Erstelle die eigentlichen Nutzdaten (<Term word="Payload" def="Die reinen Nutzdaten, also die eigentliche Nachricht oder Datei, ohne Steuerungsinformationen."/>), die über die Chat-App an deinen Freund versendet werden sollen.</p>
+                        <textarea 
+                            className="w-full flex-1 min-h-[150px] bg-slate-900 border border-slate-700 p-5 text-cyan-300 font-mono-term text-lg rounded-xl focus:border-cyan-500 focus:outline-none shadow-inner"
+                            placeholder="Tippe deine Nachricht hier..."
+                            value={msg} onChange={(e) => setMsg(e.target.value)} disabled={stamped}
+                        />
+                    </div>
+                    <div className="panel-footer p-5">
+                        <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
+                        {!stamped ? 
+                            <Button onClick={handleAction} className="w-full py-4 text-lg">NUTZDATEN ERSTELLEN</Button> : 
+                            <Button onClick={onComplete} className="w-full py-4 text-lg bg-slate-700 hover:bg-slate-600">Weiter zur Transportschicht <ArrowRight size={20}/></Button>
+                        }
+                    </div>
+                </div>
+            );
+        };
 
-    useEffect(() => { addLog("System: 3 IP-Pakete bereit. Benötige MAC-Adressen für physische Zustellung."); }, []);
+        const Level2Transport = ({ onComplete, addLog, originalMessage }) => {
+            const [cut, setCut] = useState(false);
+            const [tool, setTool] = useState(null);
+            const [segs, setSegs] = useState([{id:1, port:false, seq:null}, {id:2, port:false, seq:null}, {id:3, port:false, seq:null}]);
+            const [feedback, setFeedback] = useState(null);
 
-    const handleSrcSelect = (mac) => {
-        if (mac !== targetSrcMac) {
-            addLog("[ERROR] Falsche Quell-MAC.", "error");
-            return setFeedback({type:'error', text:'Falsche Absender-Hardware! Schau in die Missionsdaten: Welche MAC hat dein eigener PC?'});
-        }
-        setSrcMac(mac);
-        setFeedback(null);
-        setStep(2);
-        addLog(`> Quell-MAC korrekt gesetzt: ${mac}`);
-    };
+            useEffect(() => {
+                addLog("System: Daten von Applikation erhalten.");
+                addLog("[WARN] Payload überschreitet Netz-MTU. Zerschneiden (Segmentierung) erforderlich.", "warn");
+            }, []);
 
-    const handleDstSelect = (mac) => {
-        if (mac !== friendMac) {
-            addLog("[ERROR] Falsche Ziel-MAC.", "error");
-            return setFeedback({type:'error', text:'Falsch! Da ihr im selben Netzwerk seid, brauchen wir keinen Router nach draußen. Schau in die Missionsdaten nach der MAC deines Freundes.'});
-        }
-        setDstMac(mac);
-        setFeedback(null);
-        setStep(3);
-        addLog(`> Ziel-MAC korrekt gesetzt: ${mac}`);
-    };
+            const handleCut = () => {
+                setCut(true);
+                addLog("Führe Daten-Segmentierung durch...");
+                setTimeout(() => addLog("Payload in 3 Segmente zerschnitten. Warte auf Header-Zuweisung."), 500);
+            }
 
-    const handleFcs = () => {
-        setHasFcs(true);
-        setFeedback({type:'success', text:'FCS-Trailer angehängt. Der Empfänger kann nun überprüfen, ob das Paket unbeschädigt ankam.'});
-        addLog("> Trailer (FCS) berechnet und an Frame angehängt.", "success");
-    }
+            const handleSegClick = (idx) => {
+                if (!tool) {
+                    addLog("[ERROR] Kein Header-Attribut ausgewählt.", "error");
+                    return setFeedback({ type: 'error', text: "Wähle zuerst unten ein Attribut (Port/Seq)!" });
+                }
+                let newSegs = [...segs];
+                const blockEl = document.getElementById(`seg-${idx}`);
 
-    const handleSend = () => {
-        setStatus('sent');
-        addLog(`[ETH] Ethernet-Header generiert (Src-MAC -> Dst-MAC).`, "success");
-        setTimeout(() => {
-            addLog("[SYS] Übertragung erfolgreich.", "success");
-            setStatus('done');
-        }, 1500); 
-    };
-
-    return (
-        <div className="panel-container w-full lg:w-[60%] overflow-hidden relative">
-            <div className="panel-header text-emerald-400 font-mono-term text-lg p-5">
-                <Terminal size={20} className="inline mr-3"/> ETHERNET_CTRL
-            </div>
-            <div className="panel-body flex flex-col p-6">
-                <h3 className="font-bold text-white text-2xl mb-4">Schritt 4: Physische Adressierung</h3>
-                <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-                    Wir versenden das Paket nun physisch aus deinem Rechner heraus. Da dein Freund <strong>im selben lokalen Netzwerk</strong> (WLAN/LAN) ist, können wir seine Netzwerkkarte direkt ansprechen.<br/>
-                    Nutze die <strong className="text-blue-300">Missionsdaten</strong>:
-                </p>
+                if (tool.startsWith('port')) {
+                    if (tool !== 'port443') {
+                        addLog(`[ERROR] Port ${tool.replace('port','')} ist inkorrekt für die App.`, "error");
+                        if(blockEl) { blockEl.classList.remove('shake'); void blockEl.offsetWidth; blockEl.classList.add('shake'); }
+                        if(tool === 'port80') return setFeedback({ type: 'error', text: "Port 80 ist für unverschlüsseltes HTTP. Prüfe die Missionsdaten für den richtigen Dienst!" });
+                        if(tool === 'port25') return setFeedback({ type: 'error', text: "Port 25 ist für E-Mail (SMTP). Prüfe die Missionsdaten für den richtigen Dienst!" });
+                        return setFeedback({ type: 'error', text: "Falscher Ziel-Port! Schau in die Missionsdaten." });
+                    }
+                    if(!newSegs[idx].port) addLog(`[TCP] Dest-Port 443 (HTTPS) an Block ${newSegs[idx].id} gebunden.`);
+                    newSegs[idx].port = true;
+                } else {
+                    const sNum = parseInt(tool.replace('s',''));
+                    if (newSegs.some(s => s.seq === sNum && s.id !== newSegs[idx].id)) {
+                        addLog(`[ERROR] Sequenznummer ${sNum} Konflikt.`, "error");
+                        if(blockEl) { blockEl.classList.remove('shake'); void blockEl.offsetWidth; blockEl.classList.add('shake'); }
+                        return setFeedback({ type: 'error', text: "Kollision! Jedes Segment braucht eine EINDEUTIGE Sequenznummer für den späteren Zusammenbau." });
+                    }
+                    if(newSegs[idx].seq !== sNum) addLog(`[TCP] Seq-No ${sNum} an Block ${newSegs[idx].id} angehängt.`);
+                    newSegs[idx].seq = sNum;
+                }
                 
-                <div className="space-y-4">
-                    {step === 1 && (
-                        <div className="fade-in">
-                            <span className="text-sm text-slate-400 block mb-4">Schritt 4.1: Wähle die <strong>Quell-MAC</strong> (Wessen Netzwerkkarte sendet?):</span>
-                            <div className="space-y-3">
-                                <button onClick={()=>handleSrcSelect("AA:BB:CC:11:22:33")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">AA:BB:CC:11:22:33</button>
-                                <button onClick={()=>handleSrcSelect(targetSrcMac)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">{targetSrcMac}</button>
-                                <button onClick={()=>handleSrcSelect(friendMac)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">{friendMac}</button>
-                            </div>
-                        </div>
-                    )}
+                setSegs(newSegs); setTool(null); setFeedback(null);
 
-                    {step >= 2 && (
-                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
-                            <div>
-                                <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Quell-MAC (Absender)</span>
-                                <span className="font-mono-term text-xl text-emerald-400">{srcMac}</span>
-                            </div>
-                            <CheckCircle2 className="text-emerald-500" size={24} />
-                        </div>
-                    )}
+                if (newSegs.every(s => s.port && s.seq)) {
+                    addLog("[OK] TCP-Header für alle Segmente konfiguriert.", "success");
+                    setFeedback({ type: 'success', text: "Korrekt! Port 443 verweist auf die sichere Chat-App deines Freundes. Die Sequenznummern garantieren die richtige Reihenfolge beim Zusammensetzen." });
+                }
+            };
 
-                    {step === 2 && (
-                        <div className="fade-in">
-                            <span className="text-sm text-slate-400 block mb-4 mt-6">Schritt 4.2: Wähle nun die <strong>Ziel-MAC</strong> (Wessen Netzwerkkarte empfängt im lokalen Netz?):</span>
-                            <div className="space-y-3">
-                                <button onClick={()=>handleDstSelect("AA:BB:CC:11:22:33")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">AA:BB:CC:11:22:33</button>
-                                <button onClick={()=>handleDstSelect(friendMac)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">{friendMac}</button>
-                            </div>
-                        </div>
-                    )}
+            const isDone = segs.every(s => s.port && s.seq);
 
-                    {step >= 3 && (
-                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
-                            <div>
-                                <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Ziel-MAC (Empfänger)</span>
-                                <span className="font-mono-term text-xl text-emerald-400">{dstMac}</span>
+            return (
+                <div className={`panel-container w-full lg:w-[60%] transition-all duration-300 ${isDone ? 'flash-success' : ''}`}>
+                    <div className="panel-header text-purple-400 font-mono-term text-lg p-5">
+                        <Terminal size={20} className="inline mr-3"/> TRANSPORT_MODUL
+                    </div>
+                    
+                    <div className="panel-body flex flex-col p-6">
+                        <h3 className="font-bold text-white text-2xl mb-4">Schritt 2: {cut ? "Prozessadressierung & Reihenfolge" : "Segmentierung"}</h3>
+                        
+                        {!cut ? (
+                            <div className="flex-1 flex flex-col items-center justify-center bg-slate-900/50 rounded-xl border border-slate-700 p-8">
+                                <p className="text-lg text-slate-300 mb-8 text-center leading-relaxed max-w-lg">
+                                    Unsere Nachricht ist zu groß für das Netzwerk und muss zerteilt werden (<Term word="Segmentierung" def="Das Zerteilen einer großen Nachricht in mehrere kleine Segmente, die die maximale Übertragungsgröße (MTU) nicht überschreiten."/>).
+                                </p>
+                                <div className="w-full min-h-[6rem] mb-10 bg-cyan-950/30 border-2 border-dashed border-cyan-500/50 flex flex-col items-center justify-center text-cyan-400 font-mono-term text-lg p-4 shadow-inner rounded-lg">
+                                    <span className="break-words text-center">"{originalMessage || "Test-Nachricht"}"</span>
+                                </div>
+                                <Button onClick={handleCut} variant="outline" className="py-4 px-8 text-lg"><Scissors size={24} className="mr-3"/> Daten in Segmente zerschneiden</Button>
                             </div>
-                            <CheckCircle2 className="text-emerald-500" size={24} />
-                        </div>
-                    )}
+                        ) : (
+                            <div className="flex-1 flex flex-col bg-slate-900/50 rounded-xl border border-slate-700 p-6 fade-in">
+                                <p className="text-lg text-slate-300 mb-8 leading-relaxed">
+                                    Schau in die <strong className="text-blue-300">Missionsdaten</strong>: Über welchen Dienst läuft die Chat-App des Freundes? Welcher <strong>Ziel-Port</strong> gehört dazu? Adressiere jedes Segment damit und sichere die Reihenfolge durch <Term word="Sequenznummern" def="Eine fortlaufende Nummer, durch die der Empfänger die Segmente am Ende wieder wie ein Puzzle in der korrekten Reihenfolge zusammensetzen kann."/>.
+                                </p>
+                                <div className="flex justify-center gap-5 flex-1 items-center mb-8">
+                                    {segs.map((s, i) => (
+                                        <div key={s.id} id={`seg-${i}`} onClick={() => handleSegClick(i)} className={`flex-1 max-w-[120px] h-36 border-2 border-dashed rounded-xl bg-slate-900 flex flex-col p-2 cursor-pointer transition-all duration-200 hover:-translate-y-2 ${tool ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-slate-600'} ${s.port && s.seq ? 'border-emerald-500/50 bg-emerald-950/20' : ''}`}>
+                                            <div className="text-center text-xs font-mono-term text-slate-400 mb-auto border-b border-slate-800 pb-2 pt-1">DATEN {s.id}</div>
+                                            {s.port && <div className="bg-purple-950/80 border border-purple-500/50 text-purple-300 text-xs font-mono-term py-2 rounded-lg text-center mb-2">PORT 443</div>}
+                                            {s.seq && <div className="bg-purple-950/80 border border-purple-500/50 text-purple-300 text-xs font-mono-term py-2 rounded-lg text-center">SEQ 0{s.seq}</div>}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-wrap gap-3 justify-center shrink-0">
+                                    <Button variant={tool==='port80'?'primary':'outline'} onClick={()=>setTool('port80')} className="text-sm py-2 px-4">Port 80 (HTTP)</Button>
+                                    <Button variant={tool==='port443'?'primary':'outline'} onClick={()=>setTool('port443')} className="text-sm py-2 px-4">Port 443 (HTTPS)</Button>
+                                    <Button variant={tool==='port25'?'primary':'outline'} onClick={()=>setTool('port25')} className="text-sm py-2 px-4">Port 25 (SMTP)</Button>
+                                    <div className="w-px h-full bg-slate-700 mx-2"></div>
+                                    {[1,2,3].map(n => <Button key={n} variant={tool===`s${n}`?'primary':'outline'} onClick={()=>setTool(`s${n}`)} disabled={segs.some(s=>s.seq===n) && !tool} className="text-sm py-2 px-4">Seq 0{n}</Button>)}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-                    {step === 3 && (
-                        <div className="fade-in mt-6">
-                            <span className="text-sm text-slate-400 block mb-4">Schritt 4.3: Fehlerprüfung (Trailer) anfügen:</span>
-                            <p className="text-sm text-slate-300 mb-4">
-                                Daten können bei der Kabel/WLAN-Übertragung durch Störsignale verfälscht werden. Berechne eine Prüfsumme (<Term word="FCS" def="Frame Check Sequence: Eine Prüfsumme am Ende des Frames, mit der der Empfänger checkt, ob Bits 'umgekippt' sind."/>) und hänge sie als <strong>Trailer</strong> an das Ende des Frames.
-                            </p>
-                            {!hasFcs ? (
-                                <Button onClick={handleFcs} variant="outline" className="w-full py-4 text-lg">
-                                    <Fingerprint size={20}/> PRÜFSUMME (FCS) BERECHNEN
-                                </Button>
-                            ) : (
+                    <div className="panel-footer p-5 flex flex-col">
+                        <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
+                        <div className="flex justify-end mt-auto">
+                            {isDone && <Button variant="primary" onClick={onComplete} className="w-full py-4 text-lg animate-pulse">Weiter zur Internetschicht <ArrowRight size={20}/></Button>}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Level3Internet = ({ onComplete, addLog }) => {
+            const [step, setStep] = useState(1);
+            const [srcIp, setSrcIp] = useState(null);
+            const [dstIp, setDstIp] = useState(null);
+            const [packed, setPacked] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            
+            const targetSrcIp = "192.168.1.10";
+            const targetDstIp = "192.168.1.22";
+
+            useEffect(() => { addLog("System: 3 TCP-Segmente empfangen. Erwarte IP-Adressierung..."); }, []);
+
+            const handleSrcSelect = (ip) => {
+                if (ip !== targetSrcIp) {
+                    addLog("[ERROR] Falsche Quell-IP.", "error");
+                    return setFeedback({type:'error', text:'Falscher Absender! Schau in die Missionsdaten: Welche IP hat dein eigener PC?'});
+                }
+                setSrcIp(ip);
+                setFeedback(null);
+                setStep(2);
+                addLog(`> Quell-IP korrekt gesetzt: ${ip}`);
+            };
+
+            const handleDstSelect = (ip) => {
+                if (ip !== targetDstIp) {
+                    addLog("[ERROR] Falsche Ziel-IP.", "error");
+                    return setFeedback({type:'error', text:'Falscher Empfänger! Die IP-Adresse ist wie der Name auf einem Brief – sie muss das finale Ziel (den PC des Freundes) benennen.'});
+                }
+                setDstIp(ip);
+                setFeedback(null);
+                setStep(3);
+                addLog(`> Ziel-IP korrekt gesetzt: ${ip}`);
+            };
+
+            const handlePack = () => {
+                setPacked(true); 
+                addLog(`[IP] L3 Header generiert. Src-IP: ${srcIp} -> Dst-IP: ${dstIp}.`, "success");
+                addLog("[OK] Alle 3 Segmente in IP-Pakete gekapselt.", "success");
+                setFeedback({type:'success', text:'Korrekt! Die logischen Absender- und Empfänger-IPs sind vergeben. Die Pakete sind weltweit adressiert.'});
+            };
+
+            return (
+                <div className={`panel-container w-full lg:w-[60%] ${packed ? 'flash-success' : ''}`}>
+                    <div className="panel-header text-orange-400 font-mono-term text-lg p-5">
+                        <Terminal size={20} className="inline mr-3"/> IP_ROUTING
+                    </div>
+                    <div className="panel-body flex flex-col p-6">
+                        <h3 className="font-bold text-white text-2xl mb-4">Schritt 3: Logische Adressierung</h3>
+                        <p className="text-lg text-slate-300 mb-8 leading-relaxed">
+                            Die logische Adressierung (<Term word="IP-Adresse" def="Internet Protocol: Die logische Adresse eines Geräts im Netzwerk."/>) adressiert die Computer auf logischer Ebene. <br/>
+                            Nutze die <strong className="text-blue-300">Missionsdaten</strong> für die nächsten Schritte:
+                        </p>
+                        
+                        <div className="space-y-6 mt-2">
+                            {step === 1 && (
+                                <div className="fade-in">
+                                    <span className="text-sm text-slate-400 block mb-4">Schritt 3.1: Wähle die <strong>Quell-IP</strong> (Wer ist der Absender?):</span>
+                                    <div className="space-y-3">
+                                        <button onClick={()=>handleSrcSelect("192.168.1.1")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">192.168.1.1</button>
+                                        <button onClick={()=>handleSrcSelect(targetDstIp)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">{targetDstIp}</button>
+                                        <button onClick={()=>handleSrcSelect(targetSrcIp)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">{targetSrcIp}</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step >= 2 && (
                                 <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
                                     <div>
-                                        <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Trailer</span>
-                                        <span className="font-mono-term text-xl text-emerald-400">FCS GÜLTIG</span>
+                                        <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Quell-IP (Absender)</span>
+                                        <span className="font-mono-term text-xl text-orange-400">{srcIp}</span>
+                                    </div>
+                                    <CheckCircle2 className="text-emerald-500" size={24} />
+                                </div>
+                            )}
+
+                            {step === 2 && (
+                                <div className="fade-in">
+                                    <span className="text-sm text-slate-400 block mb-4 mt-6">Schritt 3.2: Wähle nun die <strong>Ziel-IP</strong> (Wer soll es erhalten?):</span>
+                                    <div className="space-y-3">
+                                        <button onClick={()=>handleDstSelect("10.0.0.1")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">10.0.0.1</button>
+                                        <button onClick={()=>handleDstSelect(targetDstIp)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">{targetDstIp}</button>
+                                        <button onClick={()=>handleDstSelect("192.168.1.1")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-orange-500 font-mono-term text-lg">192.168.1.1</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 3 && (
+                                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Ziel-IP (Empfänger)</span>
+                                        <span className="font-mono-term text-xl text-orange-400">{dstIp}</span>
                                     </div>
                                     <CheckCircle2 className="text-emerald-500" size={24} />
                                 </div>
                             )}
                         </div>
-                    )}
+                    </div>
+                    <div className="panel-footer p-5">
+                        <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
+                        {step === 3 && !packed ? 
+                            <Button onClick={handlePack} className="w-full py-4 text-lg !bg-orange-600 hover:!bg-orange-500">IP-HEADER ANFÜGEN</Button> 
+                            : null
+                        }
+                        {packed && (
+                            <Button onClick={onComplete} className="w-full py-4 text-lg bg-slate-700">Weiter zur Netzzugangsschicht <ArrowRight size={20}/></Button>
+                        )}
+                    </div>
                 </div>
-            </div>
-            <div className="panel-footer p-5">
-                <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
-                <div className="flex justify-end mt-auto">
-                    {step === 3 && hasFcs && status === 'idle' && <Button onClick={handleSend} className="w-full py-4 text-lg !bg-emerald-600 hover:!bg-emerald-500">KAPSELUNG ABSCHLIESSEN & SENDEN</Button>}
-                    {status === 'done' && <Button onClick={onComplete} className="w-full py-4 text-lg bg-slate-700">Weiter zum Freund <ArrowRight size={20}/></Button>}
-                </div>
-            </div>
-        </div>
-    );
-};
+            );
+        };
 
-const BossLevel = ({ originalMessage, addLog, onRestart }) => {
-    const [frames, setFrames] = useState([{id:2, l:3}, {id:1, l:3}, {id:3, l:3}]); 
-    const [assembled, setAssembled] = useState([]);
-    const [expected, setExpected] = useState(1);
-    const [status, setStatus] = useState('play'); 
-    const [decryptedText, setDecryptedText] = useState("");
-    
-    useEffect(() => { addLog("PC Freund: Frames empfangen. Sequenz unregelmäßig. Starte Reassembly..."); }, []);
+        const Level4Network = ({ onComplete, addLog }) => {
+            const [step, setStep] = useState(1);
+            const [srcMac, setSrcMac] = useState(null);
+            const [dstMac, setDstMac] = useState(null);
+            const [hasFcs, setHasFcs] = useState(false);
+            const [status, setStatus] = useState('idle');
+            const [feedback, setFeedback] = useState(null);
+            
+            const targetSrcMac = "00:1A:2B:3C:4D:5E";
+            const friendMac = "FF:EE:DD:AA:BB:CC";
 
-    const handleStrip = (idx) => {
-        if(status !== 'play') return;
-        let newFrames = [...frames];
-        let f = newFrames[idx];
-        
-        if(f.l > 0) {
-            if(f.l === 3) addLog(`> MAC-Header & FCS-Trailer erfolgreich abgestreift.`);
-            if(f.l === 2) addLog(`> IP-Header geprüft und abgestreift.`);
-            f.l -= 1;
-            setFrames(newFrames);
-        } else if(f.l === 0 && !assembled.includes(f.id)) {
-            if(f.id === expected) {
-                setAssembled([...assembled, f.id]);
-                setExpected(expected + 1);
-                addLog(`> [TCP] Segment ${f.id} in Puffer geschrieben.`, "success");
-                if(expected === 3) { 
-                    setStatus('decrypting'); 
-                    addLog("[OK] Alle Segmente empfangen. Rekonstruiere Payload...", "success");
-                    simulateDecryption();
+            useEffect(() => { addLog("System: 3 IP-Pakete bereit. Benötige MAC-Adressen für physische Zustellung."); }, []);
+
+            const handleSrcSelect = (mac) => {
+                if (mac !== targetSrcMac) {
+                    addLog("[ERROR] Falsche Quell-MAC.", "error");
+                    return setFeedback({type:'error', text:'Falsche Absender-Hardware! Schau in die Missionsdaten: Welche MAC hat dein eigener PC?'});
                 }
-            } else {
-                const el = document.getElementById(`f-${idx}`);
-                if(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
-                addLog(`[WARN] Falsche Sequenz! Erwarte Seq ${expected}, bekam ${f.id}.`, "warn");
+                setSrcMac(mac);
+                setFeedback(null);
+                setStep(2);
+                addLog(`> Quell-MAC korrekt gesetzt: ${mac}`);
+            };
+
+            const handleDstSelect = (mac) => {
+                if (mac !== friendMac) {
+                    addLog("[ERROR] Falsche Ziel-MAC.", "error");
+                    return setFeedback({type:'error', text:'Falsch! Da ihr im selben Netzwerk seid, brauchen wir keinen Router nach draußen. Schau in die Missionsdaten nach der MAC deines Freundes.'});
+                }
+                setDstMac(mac);
+                setFeedback(null);
+                setStep(3);
+                addLog(`> Ziel-MAC korrekt gesetzt: ${mac}`);
+            };
+
+            const handleFcs = () => {
+                setHasFcs(true);
+                setFeedback({type:'success', text:'FCS-Trailer angehängt. Der Empfänger kann nun überprüfen, ob das Paket unbeschädigt ankam.'});
+                addLog("> Trailer (FCS) berechnet und an Frame angehängt.", "success");
             }
-        }
-    };
 
-    const simulateDecryption = () => {
-        let currentText = "";
-        const targetText = originalMessage || "Test-Nachricht";
-        let i = 0;
-        
-        const typeInterval = setInterval(() => {
-            if(i < targetText.length) {
-                currentText += targetText.charAt(i);
-                setDecryptedText(currentText);
-                i++;
-            } else {
-                clearInterval(typeInterval);
-                setStatus('win');
-            }
-        }, 50);
-    };
+            const handleSend = () => {
+                setStatus('sent');
+                addLog(`[ETH] Ethernet-Header generiert (Src-MAC -> Dst-MAC).`, "success");
+                setTimeout(() => {
+                    addLog("[SYS] Übertragung erfolgreich.", "success");
+                    setStatus('done');
+                }, 1500); 
+            };
 
-    const colors = ["bg-cyan-900/80 border-cyan-500", "bg-purple-900/80 border-purple-500", "bg-orange-900/80 border-orange-500", "bg-emerald-900/80 border-emerald-500"];
-    const labels = ["PAYLOAD", "STRIP TCP", "STRIP IP", "STRIP MAC & FCS"];
-
-    return (
-        <div className="panel-container w-full border-red-900/50 shadow-[0_0_40px_rgba(220,38,38,0.15)] relative">
-            <div className="panel-header border-slate-700/80 flex items-center gap-4 p-5">
-                <User size={32} className="text-red-500"/>
-                <h2 className="text-2xl font-bold text-red-500 tracking-wide">PC DES FREUNDES: ENTKAPSELUNG</h2>
-            </div>
-
-            <div className="panel-body flex flex-col justify-between relative z-10 p-8">
-                {status === 'play' && (
-                    <>
-                        <p className="text-slate-300 text-center text-lg mb-8 bg-slate-800/50 py-4 rounded-xl border border-slate-700/50">
-                            Klicke auf die Frames, um Layer für Layer abzuziehen (Entkapselung).<br/>
-                            <span className="text-yellow-400 font-bold">WICHTIG:</span> Lege die entpackten Daten strikt chronologisch nach <strong>Sequenznummer</strong> in den Puffer!
+            return (
+                <div className="panel-container w-full lg:w-[60%] overflow-hidden relative">
+                    <div className="panel-header text-emerald-400 font-mono-term text-lg p-5">
+                        <Terminal size={20} className="inline mr-3"/> ETHERNET_CTRL
+                    </div>
+                    <div className="panel-body flex flex-col p-6">
+                        <h3 className="font-bold text-white text-2xl mb-4">Schritt 4: Physische Adressierung</h3>
+                        <p className="text-lg text-slate-300 mb-8 leading-relaxed">
+                            Wir versenden das Paket nun physisch aus deinem Rechner heraus. Da dein Freund <strong>im selben lokalen Netzwerk</strong> (WLAN/LAN) ist, können wir seine Netzwerkkarte direkt ansprechen.<br/>
+                            Nutze die <strong className="text-blue-300">Missionsdaten</strong>:
                         </p>
                         
-                        <div className="flex justify-center gap-8 mb-10">
-                            {frames.map((f, i) => (
-                                <div key={i} id={`f-${i}`} onClick={() => handleStrip(i)} className={`w-36 h-48 border-4 rounded-2xl flex flex-col items-center justify-center text-sm font-mono-term cursor-pointer transition-all hover:-translate-y-2 active:scale-95 text-white bg-slate-900 shadow-2xl ${colors[f.l]} ${assembled.includes(f.id) ? 'opacity-0 pointer-events-none scale-50' : ''}`}>
-                                    {f.l === 0 ? <><FileText size={40} className="mb-3 text-cyan-400"/><span className="text-lg font-bold">SEQ 0{f.id}</span></> : <><Unlock size={32} className="mb-3 opacity-50"/><span className="text-center px-3 font-bold tracking-widest text-base">{labels[f.l]}</span></>}
-                                    {f.l > 0 && <span className="mt-3 text-xs opacity-60">LAYER {f.l+1}</span>}
+                        <div className="space-y-4">
+                            {step === 1 && (
+                                <div className="fade-in">
+                                    <span className="text-sm text-slate-400 block mb-4">Schritt 4.1: Wähle die <strong>Quell-MAC</strong> (Wessen Netzwerkkarte sendet?):</span>
+                                    <div className="space-y-3">
+                                        <button onClick={()=>handleSrcSelect("AA:BB:CC:11:22:33")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">AA:BB:CC:11:22:33</button>
+                                        <button onClick={()=>handleSrcSelect(targetSrcMac)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">{targetSrcMac}</button>
+                                        <button onClick={()=>handleSrcSelect(friendMac)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">{friendMac}</button>
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
+                            )}
 
-                        <div className="h-36 mt-auto border-2 border-dashed border-cyan-800 bg-slate-950/80 rounded-xl flex justify-center items-center gap-6 p-4 relative">
-                            <span className="absolute top-3 left-3 text-xs text-cyan-500 font-mono-term tracking-widest bg-slate-900 px-2 py-1 border border-cyan-900/50 rounded">TCP_REASSEMBLY_BUFFER</span>
-                            {assembled.length === 0 && <span className="text-slate-600 text-lg italic font-mono-term animate-pulse">Wartet auf Block 01...</span>}
-                            {assembled.map(id => (
-                                <div key={id} className="w-24 h-24 bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-lg shadow-[0_0_15px_rgba(8,145,178,0.3)] flex flex-col items-center justify-center text-xs font-mono-term fade-in">
-                                    <Database size={24} className="mb-2 text-cyan-400"/>
-                                    BLOCK_0{id}
+                            {step >= 2 && (
+                                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Quell-MAC (Absender)</span>
+                                        <span className="font-mono-term text-xl text-emerald-400">{srcMac}</span>
+                                    </div>
+                                    <CheckCircle2 className="text-emerald-500" size={24} />
                                 </div>
-                            ))}
-                        </div>
-                    </>
-                )}
+                            )}
 
-                {(status === 'decrypting' || status === 'win') && (
-                    <div className="flex-1 flex flex-col items-center justify-center fade-in w-full">
-                        <div className="bg-slate-900 border border-cyan-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(6,182,212,0.25)] max-w-xl w-full text-center">
-                            <h3 className="text-cyan-400 font-mono-term mb-6 text-base uppercase tracking-widest">Nutzdaten erfolgreich extrahiert</h3>
-                            <p className="text-2xl text-white font-serif italic mb-8">"{decryptedText}{status === 'decrypting' ? <span className="inline-block w-2 h-6 bg-cyan-500 ml-1 animate-pulse"></span> : ''}"</p>
-                            
-                            {status === 'win' && (
-                                <Button onClick={onRestart} className="mt-4 mx-auto py-4 px-8 text-lg">
-                                    <RefreshCw size={24} /> Neue Nachricht versenden
-                                </Button>
+                            {step === 2 && (
+                                <div className="fade-in">
+                                    <span className="text-sm text-slate-400 block mb-4 mt-6">Schritt 4.2: Wähle nun die <strong>Ziel-MAC</strong> (Wessen Netzwerkkarte empfängt im lokalen Netz?):</span>
+                                    <div className="space-y-3">
+                                        <button onClick={()=>handleDstSelect("AA:BB:CC:11:22:33")} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">AA:BB:CC:11:22:33</button>
+                                        <button onClick={()=>handleDstSelect(friendMac)} className="w-full p-4 text-left rounded-xl border-2 border-slate-700 bg-slate-900 hover:border-emerald-500 font-mono-term text-lg">{friendMac}</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step >= 3 && (
+                                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Ziel-MAC (Empfänger)</span>
+                                        <span className="font-mono-term text-xl text-emerald-400">{dstMac}</span>
+                                    </div>
+                                    <CheckCircle2 className="text-emerald-500" size={24} />
+                                </div>
+                            )}
+
+                            {step === 3 && (
+                                <div className="fade-in mt-6">
+                                    <span className="text-sm text-slate-400 block mb-4">Schritt 4.3: Fehlerprüfung (Trailer) anfügen:</span>
+                                    <p className="text-sm text-slate-300 mb-4">
+                                        Daten können bei der Kabel/WLAN-Übertragung durch Störsignale verfälscht werden. Berechne eine Prüfsumme (<Term word="FCS" def="Frame Check Sequence: Eine Prüfsumme am Ende des Frames, mit der der Empfänger checkt, ob Bits 'umgekippt' sind."/>) und hänge sie als <strong>Trailer</strong> an das Ende des Frames.
+                                    </p>
+                                    {!hasFcs ? (
+                                        <Button onClick={handleFcs} variant="outline" className="w-full py-4 text-lg">
+                                            <Fingerprint size={20}/> PRÜFSUMME (FCS) BERECHNEN
+                                        </Button>
+                                    ) : (
+                                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 fade-in flex items-center justify-between">
+                                            <div>
+                                                <span className="text-xs text-slate-500 uppercase tracking-widest block mb-1">Trailer</span>
+                                                <span className="font-mono-term text-xl text-emerald-400">FCS GÜLTIG</span>
+                                            </div>
+                                            <CheckCircle2 className="text-emerald-500" size={24} />
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-const TeacherLoginModal = ({ onClose, onCodeSubmit }) => {
-    const [code, setCode] = useState('');
-    const inputRef = useRef(null);
-
-    useEffect(() => { inputRef.current?.focus(); }, []);
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            onCodeSubmit(code);
-            onClose();
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center fade-in">
-            <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl w-80 relative">
-                <h3 className="text-red-400 font-bold font-mono-term mb-4 flex items-center gap-2"><Settings size={18}/> SYSTEM_OVERRIDE</h3>
-                <input 
-                    ref={inputRef}
-                    type="password" 
-                    value={code} 
-                    onChange={e=>setCode(e.target.value)} 
-                    onKeyDown={handleKeyDown} 
-                    className="w-full bg-[#0a0a0a] border border-slate-700 p-3 rounded text-cyan-400 font-mono-term text-sm focus:outline-none focus:border-cyan-500 mb-6" 
-                    placeholder="Admin-Code eingeben..."
-                />
-                <div className="flex justify-end gap-3">
-                    <Button onClick={onClose} variant="outline" className="py-2 px-4 text-xs">Abbrechen</Button>
-                    <Button onClick={()=>{onCodeSubmit(code); onClose();}} className="py-2 px-4 text-xs">Bestätigen</Button>
+                    <div className="panel-footer p-5">
+                        <FeedbackToast text={feedback?.text} type={feedback?.type} onClear={() => setFeedback(null)} />
+                        <div className="flex justify-end mt-auto">
+                            {step === 3 && hasFcs && status === 'idle' && <Button onClick={handleSend} className="w-full py-4 text-lg !bg-emerald-600 hover:!bg-emerald-500">KAPSELUNG ABSCHLIESSEN & SENDEN</Button>}
+                            {status === 'done' && <Button onClick={onComplete} className="w-full py-4 text-lg bg-slate-700">Weiter zum Freund <ArrowRight size={20}/></Button>}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    );
-};
-
-export default function App() {
-    const [gameState, setGameState] = useState('welcome'); 
-    const [currentLevelId, setCurrentLevelId] = useState(1);
-    const [originalMessage, setOriginalMessage] = useState("");
-    const [teacherModes, setTeacherModes] = useState({ unlockedAll: false });
-    const [showTeacherModal, setShowTeacherModal] = useState(false);
-    const topRef = useRef(null);
-    
-    const [logs, setLogs] = useState([{time: new Date().toLocaleTimeString(), msg: "System boot sequence initiated...", type: "info"}]);
-    const addLog = (msg, type="info") => setLogs(p => [...p, {time: new Date().toLocaleTimeString(), msg, type}]);
-
-    useEffect(() => {
-        const scrollToTop = () => {
-            window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
-            if (topRef.current) {
-                topRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
-            }
+            );
         };
-        
-        scrollToTop();
-        setTimeout(scrollToTop, 50);
-    }, [currentLevelId, gameState]);
 
-    const handleLevelComplete = () => {
-        if (currentLevelId < 5) {
-            setCurrentLevelId(currentLevelId + 1);
-            addLog(`--- SWITCH TO LAYER ${currentLevelId + 1} ---`, "warn");
-        }
-    };
-
-    const handleRestart = () => {
-        setGameState('welcome');
-        setCurrentLevelId(1);
-        setOriginalMessage("");
-        setLogs([{time: new Date().toLocaleTimeString(), msg: "System rebooted. Ready for new input.", type: "info"}]);
-    };
-
-    const handleSecretCode = (rawCode) => {
-        const c = rawCode.trim().toUpperCase();
-        if(c === "MATRJOSCHKA") {
-            setTeacherModes({ unlockedAll: true });
-            addLog("[ADMIN] System Override akzeptiert. Alle Level freigeschaltet.", "warn");
-        } else {
-            addLog("[SYS] Code ungültig.", "error");
-        }
-    };
-
-    if (gameState === 'welcome') {
-        return (
-            <div ref={topRef} className="flex items-center justify-center min-h-screen w-full bg-[#0f172a] p-6 text-slate-50 relative overflow-hidden font-sans">
-                <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
-                <div className="absolute inset-0 pointer-events-none opacity-20" style={{backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)', backgroundSize: '60px 60px'}}></div>
-                
-                <div className="max-w-3xl text-center bg-slate-900/90 backdrop-blur-md p-12 rounded-3xl border border-slate-700 shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative z-10">
-                    <div className="w-24 h-24 rounded-full bg-cyan-950 border-2 border-cyan-500/50 flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(6,182,212,0.3)]">
-                        <Network size={50} className="text-cyan-400" />
-                    </div>
-                    <h1 className="text-5xl font-extrabold text-white mb-8 tracking-tight uppercase">Die digitale <span className="text-cyan-500">Matrjoschka</span></h1>
-                    
-                    <p className="text-slate-300 mb-10 leading-relaxed text-xl text-left bg-slate-950/60 p-8 rounded-xl border border-slate-800">
-                        Begleite ein Datenpaket auf seinem Weg durch das <Term word="TCP/IP-Modell" def="Transmission Control Protocol / Internet Protocol: Die Grundlage, wie Daten im Internet verpackt und versendet werden."/>. <br/><br/>
-                        Fülle parallel das Arbeitsblatt aus, um die wichtigsten Informationen festzuhalten.
-                    </p>
-                    <Button onClick={() => setGameState('playing')} className="w-full text-2xl py-6 shadow-[0_0_30px_rgba(8,145,178,0.5)]"><Play fill="currentColor" size={28}/> SIMULATION STARTEN</Button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div ref={topRef} className="min-h-screen w-full text-slate-50 bg-[#0f172a] flex flex-col font-sans relative">
-            <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+        const BossLevel = ({ originalMessage, addLog, onRestart }) => {
+            const [frames, setFrames] = useState([{id:2, l:3}, {id:1, l:3}, {id:3, l:3}]); 
+            const [assembled, setAssembled] = useState([]);
+            const [expected, setExpected] = useState(1);
+            const [status, setStatus] = useState('play'); 
+            const [decryptedText, setDecryptedText] = useState("");
             
-            <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 py-4 px-6 shadow-xl">
-                <div className="flex items-center gap-8 w-full max-w-5xl mx-auto justify-center relative">
-                    <div className="absolute top-[35%] left-10 right-10 h-1.5 bg-slate-800 -z-10 -translate-y-1/2 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-500/60 transition-all duration-1000" style={{width: `${(currentLevelId-1)*25}%`}}></div>
+            useEffect(() => { addLog("PC Freund: Frames empfangen. Sequenz unregelmäßig. Starte Reassembly..."); }, []);
+
+            const handleStrip = (idx) => {
+                if(status !== 'play') return;
+                let newFrames = [...frames];
+                let f = newFrames[idx];
+                
+                if(f.l > 0) {
+                    if(f.l === 3) addLog(`> MAC-Header & FCS-Trailer erfolgreich abgestreift.`);
+                    if(f.l === 2) addLog(`> IP-Header geprüft und abgestreift.`);
+                    f.l -= 1;
+                    setFrames(newFrames);
+                } else if(f.l === 0 && !assembled.includes(f.id)) {
+                    if(f.id === expected) {
+                        setAssembled([...assembled, f.id]);
+                        setExpected(expected + 1);
+                        addLog(`> [TCP] Segment ${f.id} in Puffer geschrieben.`, "success");
+                        if(expected === 3) { 
+                            setStatus('decrypting'); 
+                            addLog("[OK] Alle Segmente empfangen. Rekonstruiere Payload...", "success");
+                            simulateDecryption();
+                        }
+                    } else {
+                        const el = document.getElementById(`f-${idx}`);
+                        if(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+                        addLog(`[WARN] Falsche Sequenz! Erwarte Seq ${expected}, bekam ${f.id}.`, "warn");
+                    }
+                }
+            };
+
+            const simulateDecryption = () => {
+                let currentText = "";
+                const targetText = originalMessage || "Test-Nachricht";
+                let i = 0;
+                
+                const typeInterval = setInterval(() => {
+                    if(i < targetText.length) {
+                        currentText += targetText.charAt(i);
+                        setDecryptedText(currentText);
+                        i++;
+                    } else {
+                        clearInterval(typeInterval);
+                        setStatus('win');
+                    }
+                }, 50);
+            };
+
+            const colors = ["bg-cyan-900/80 border-cyan-500", "bg-purple-900/80 border-purple-500", "bg-orange-900/80 border-orange-500", "bg-emerald-900/80 border-emerald-500"];
+            const labels = ["PAYLOAD", "STRIP TCP", "STRIP IP", "STRIP MAC & FCS"];
+
+            return (
+                <div className="panel-container w-full border-red-900/50 shadow-[0_0_40px_rgba(220,38,38,0.15)] relative">
+                    <div className="panel-header border-slate-700/80 flex items-center gap-4 p-5">
+                        <User size={32} className="text-red-500"/>
+                        <h2 className="text-2xl font-bold text-red-500 tracking-wide">PC DES FREUNDES: ENTKAPSELUNG</h2>
                     </div>
-                    
-                    {LEVELS.map((l) => {
-                        const isActive = currentLevelId === l.id;
-                        const isCompleted = currentLevelId > l.id;
-                        const isUnlocked = l.id <= currentLevelId || teacherModes.unlockedAll;
-                        
-                        return (
-                            <button 
-                                key={l.id} 
-                                disabled={!isUnlocked} 
-                                onClick={() => { if(isUnlocked) setCurrentLevelId(l.id); }} 
-                                className={`flex flex-col items-center gap-2 transition-all duration-300 ${isActive ? 'opacity-100 scale-110' : isUnlocked ? 'opacity-70 cursor-pointer hover:-translate-y-1' : 'opacity-30 cursor-not-allowed'}`}
-                            >
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 shadow-lg
-                                    ${isActive ? `border-${l.color}-400 bg-${l.color}-950/80 text-${l.color}-300 shadow-[0_0_20px_rgba(var(--tw-colors-${l.color}-500),0.4)]` : 
-                                      isCompleted ? 'border-emerald-500/50 bg-emerald-950/30 text-emerald-500' : 'border-slate-700 bg-slate-800/50 text-slate-500'}`}>
-                                    {isCompleted && !isActive ? <CheckCircle2 size={24}/> : <l.Icon size={24}/>}
+
+                    <div className="panel-body flex flex-col justify-between relative z-10 p-8">
+                        {status === 'play' && (
+                            <>
+                                <p className="text-slate-300 text-center text-lg mb-8 bg-slate-800/50 py-4 rounded-xl border border-slate-700/50">
+                                    Klicke auf die Frames, um Layer für Layer abzuziehen (Entkapselung).<br/>
+                                    <span className="text-yellow-400 font-bold">WICHTIG:</span> Lege die entpackten Daten strikt chronologisch nach <strong>Sequenznummer</strong> in den Puffer!
+                                </p>
+                                
+                                <div className="flex justify-center gap-8 mb-10">
+                                    {frames.map((f, i) => (
+                                        <div key={i} id={`f-${i}`} onClick={() => handleStrip(i)} className={`w-36 h-48 border-4 rounded-2xl flex flex-col items-center justify-center text-sm font-mono-term cursor-pointer transition-all hover:-translate-y-2 active:scale-95 text-white bg-slate-900 shadow-2xl ${colors[f.l]} ${assembled.includes(f.id) ? 'opacity-0 pointer-events-none scale-50' : ''}`}>
+                                            {f.l === 0 ? <><FileText size={40} className="mb-3 text-cyan-400"/><span className="text-lg font-bold">SEQ 0{f.id}</span></> : <><Unlock size={32} className="mb-3 opacity-50"/><span className="text-center px-3 font-bold tracking-widest text-base">{labels[f.l]}</span></>}
+                                            {f.l > 0 && <span className="mt-3 text-xs opacity-60">LAYER {f.l+1}</span>}
+                                        </div>
+                                    ))}
                                 </div>
-                                <span className={`text-xs font-bold tracking-wider uppercase ${isActive ? 'text-white' : 'text-slate-400'}`}>{l.short}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            </header>
 
-            <main className="flex-1 flex flex-col p-6 gap-8 max-w-[1600px] mx-auto w-full z-10">
-                {currentLevelId < 5 && <NetworkContextInfo />}
+                                <div className="h-36 mt-auto border-2 border-dashed border-cyan-800 bg-slate-950/80 rounded-xl flex justify-center items-center gap-6 p-4 relative">
+                                    <span className="absolute top-3 left-3 text-xs text-cyan-500 font-mono-term tracking-widest bg-slate-900 px-2 py-1 border border-cyan-900/50 rounded">TCP_REASSEMBLY_BUFFER</span>
+                                    {assembled.length === 0 && <span className="text-slate-600 text-lg italic font-mono-term animate-pulse">Wartet auf Block 01...</span>}
+                                    {assembled.map(id => (
+                                        <div key={id} className="w-24 h-24 bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-lg shadow-[0_0_15px_rgba(8,145,178,0.3)] flex flex-col items-center justify-center text-xs font-mono-term fade-in">
+                                            <Database size={24} className="mb-2 text-cyan-400"/>
+                                            BLOCK_0{id}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        {(status === 'decrypting' || status === 'win') && (
+                            <div className="flex-1 flex flex-col items-center justify-center fade-in w-full">
+                                <div className="bg-slate-900 border border-cyan-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(6,182,212,0.25)] max-w-xl w-full text-center">
+                                    <h3 className="text-cyan-400 font-mono-term mb-6 text-base uppercase tracking-widest">Nutzdaten erfolgreich extrahiert</h3>
+                                    <p className="text-2xl text-white font-serif italic mb-8">"{decryptedText}{status === 'decrypting' ? <span className="inline-block w-2 h-6 bg-cyan-500 ml-1 animate-pulse"></span> : ''}"</p>
+                                    
+                                    {status === 'win' && (
+                                        <Button onClick={onRestart} className="mt-4 mx-auto py-4 px-8 text-lg">
+                                            <RefreshCw size={24} /> Neue Nachricht versenden
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const TeacherLoginModal = ({ onClose, onCodeSubmit }) => {
+            const [code, setCode] = useState('');
+            const inputRef = useRef(null);
+
+            useEffect(() => { inputRef.current?.focus(); }, []);
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    onCodeSubmit(code);
+                    onClose();
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center fade-in">
+                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl w-80 relative">
+                        <h3 className="text-red-400 font-bold font-mono-term mb-4 flex items-center gap-2"><Settings size={18}/> SYSTEM_OVERRIDE</h3>
+                        <input 
+                            ref={inputRef}
+                            type="password" 
+                            value={code} 
+                            onChange={e=>setCode(e.target.value)} 
+                            onKeyDown={handleKeyDown} 
+                            className="w-full bg-[#0a0a0a] border border-slate-700 p-3 rounded text-cyan-400 font-mono-term text-sm focus:outline-none focus:border-cyan-500 mb-6" 
+                            placeholder="Admin-Code eingeben..."
+                        />
+                        <div className="flex justify-end gap-3">
+                            <Button onClick={onClose} variant="outline" className="py-2 px-4 text-xs">Abbrechen</Button>
+                            <Button onClick={()=>{onCodeSubmit(code); onClose();}} className="py-2 px-4 text-xs">Bestätigen</Button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [gameState, setGameState] = useState('welcome'); 
+            const [currentLevelId, setCurrentLevelId] = useState(1);
+            const [originalMessage, setOriginalMessage] = useState("");
+            const [teacherModes, setTeacherModes] = useState({ unlockedAll: false });
+            const [showTeacherModal, setShowTeacherModal] = useState(false);
+            const topRef = useRef(null);
+            
+            const [logs, setLogs] = useState([{time: new Date().toLocaleTimeString(), msg: "System boot sequence initiated...", type: "info"}]);
+            const addLog = (msg, type="info") => setLogs(p => [...p, {time: new Date().toLocaleTimeString(), msg, type}]);
+
+            useEffect(() => {
+                const scrollToTop = () => {
+                    window.scrollTo(0, 0);
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
+                    if (topRef.current) {
+                        topRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
+                };
                 
-                <div className="flex flex-col lg:flex-row gap-6 items-stretch"> 
-                    {currentLevelId < 5 ? (
-                        <>
-                            <TheoryPanel levelId={currentLevelId} />
-                            {currentLevelId === 1 && <Level1Application onComplete={handleLevelComplete} setGlobalMessage={setOriginalMessage} addLog={addLog} />}
-                            {currentLevelId === 2 && <Level2Transport onComplete={handleLevelComplete} addLog={addLog} originalMessage={originalMessage} />}
-                            {currentLevelId === 3 && <Level3Internet onComplete={handleLevelComplete} addLog={addLog} />}
-                            {currentLevelId === 4 && <Level4Network onComplete={handleLevelComplete} addLog={addLog} />}
-                        </>
-                    ) : (
-                        <BossLevel originalMessage={originalMessage} addLog={addLog} onRestart={handleRestart} />
-                    )}
-                </div>
+                scrollToTop();
+                setTimeout(scrollToTop, 50);
+            }, [currentLevelId, gameState]);
 
-                <div className="flex flex-col lg:flex-row gap-6 items-stretch mb-10 h-[330px]">
-                    <div className="w-full lg:w-1/2 h-full">
-                        <EncapsulationTracker activeLevel={currentLevelId} />
+            const handleLevelComplete = () => {
+                if (currentLevelId < 5) {
+                    setCurrentLevelId(currentLevelId + 1);
+                    addLog(`--- SWITCH TO LAYER ${currentLevelId + 1} ---`, "warn");
+                }
+            };
+
+            const handleRestart = () => {
+                setGameState('welcome');
+                setCurrentLevelId(1);
+                setOriginalMessage("");
+                setLogs([{time: new Date().toLocaleTimeString(), msg: "System rebooted. Ready for new input.", type: "info"}]);
+            };
+
+            const handleSecretCode = (rawCode) => {
+                const c = rawCode.trim().toUpperCase();
+                if(c === "MATRJOSCHKA") {
+                    setTeacherModes({ unlockedAll: true });
+                    addLog("[ADMIN] System Override akzeptiert. Alle Level freigeschaltet.", "warn");
+                } else {
+                    addLog("[SYS] Code ungültig.", "error");
+                }
+            };
+
+            if (gameState === 'welcome') {
+                return (
+                    <div ref={topRef} className="flex items-center justify-center min-h-screen w-full bg-[#0f172a] p-6 text-slate-50 relative overflow-hidden font-sans">
+                        <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+                        <div className="absolute inset-0 pointer-events-none opacity-20" style={{backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)', backgroundSize: '60px 60px'}}></div>
+                        
+                        <div className="max-w-3xl text-center bg-slate-900/90 backdrop-blur-md p-12 rounded-3xl border border-slate-700 shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative z-10">
+                            <div className="w-24 h-24 rounded-full bg-cyan-950 border-2 border-cyan-500/50 flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(6,182,212,0.3)]">
+                                <Network size={50} className="text-cyan-400" />
+                            </div>
+                            <h1 className="text-5xl font-extrabold text-white mb-8 tracking-tight uppercase">Die digitale <span className="text-cyan-500">Matrjoschka</span></h1>
+                            
+                            <p className="text-slate-300 mb-10 leading-relaxed text-xl text-left bg-slate-950/60 p-8 rounded-xl border border-slate-800">
+                                Begleite ein Datenpaket auf seinem Weg durch das <Term word="TCP/IP-Modell" def="Transmission Control Protocol / Internet Protocol: Die Grundlage, wie Daten im Internet verpackt und versendet werden."/>. <br/><br/>
+                                Fülle parallel das Arbeitsblatt aus, um die wichtigsten Informationen festzuhalten.
+                            </p>
+                            <Button onClick={() => setGameState('playing')} className="w-full text-2xl py-6 shadow-[0_0_30px_rgba(8,145,178,0.5)]"><Play fill="currentColor" size={28}/> SIMULATION STARTEN</Button>
+                        </div>
                     </div>
-                    <div className="w-full lg:w-1/2 h-full">
-                        <SystemTerminal logs={logs} />
+                );
+            }
+
+            return (
+                <div ref={topRef} className="min-h-screen w-full text-slate-50 bg-[#0f172a] flex flex-col font-sans relative">
+                    <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+                    
+                    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 py-4 px-6 shadow-xl">
+                        <div className="flex items-center gap-8 w-full max-w-5xl mx-auto justify-center relative">
+                            <div className="absolute top-[35%] left-10 right-10 h-1.5 bg-slate-800 -z-10 -translate-y-1/2 rounded-full overflow-hidden">
+                                <div className="h-full bg-cyan-500/60 transition-all duration-1000" style={{width: `${(currentLevelId-1)*25}%`}}></div>
+                            </div>
+                            
+                            {LEVELS.map((l) => {
+                                const isActive = currentLevelId === l.id;
+                                const isCompleted = currentLevelId > l.id;
+                                const isUnlocked = l.id <= currentLevelId || teacherModes.unlockedAll;
+                                
+                                return (
+                                    <button 
+                                        key={l.id} 
+                                        disabled={!isUnlocked} 
+                                        onClick={() => { if(isUnlocked) setCurrentLevelId(l.id); }} 
+                                        className={`flex flex-col items-center gap-2 transition-all duration-300 ${isActive ? 'opacity-100 scale-110' : isUnlocked ? 'opacity-70 cursor-pointer hover:-translate-y-1' : 'opacity-30 cursor-not-allowed'}`}
+                                    >
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 shadow-lg
+                                            ${isActive ? 'border-' + l.color + '-400 bg-' + l.color + '-950/80 text-' + l.color + '-300 shadow-[0_0_20px_rgba(var(--tw-colors-' + l.color + '-500),0.4)]' : 
+                                              isCompleted ? 'border-emerald-500/50 bg-emerald-950/30 text-emerald-500' : 'border-slate-700 bg-slate-800/50 text-slate-500'}`}>
+                                            {isCompleted && !isActive ? <CheckCircle2 size={24}/> : <l.Icon size={24}/>}
+                                        </div>
+                                        <span className={`text-xs font-bold tracking-wider uppercase ${isActive ? 'text-white' : 'text-slate-400'}`}>{l.short}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </header>
+
+                    <main className="flex-1 flex flex-col p-6 gap-8 max-w-[1600px] mx-auto w-full z-10">
+                        {currentLevelId < 5 && <NetworkContextInfo />}
+                        
+                        <div className="flex flex-col lg:flex-row gap-6 items-stretch"> 
+                            {currentLevelId < 5 ? (
+                                <>
+                                    <TheoryPanel levelId={currentLevelId} />
+                                    {currentLevelId === 1 && <Level1Application onComplete={handleLevelComplete} setGlobalMessage={setOriginalMessage} addLog={addLog} />}
+                                    {currentLevelId === 2 && <Level2Transport onComplete={handleLevelComplete} addLog={addLog} originalMessage={originalMessage} />}
+                                    {currentLevelId === 3 && <Level3Internet onComplete={handleLevelComplete} addLog={addLog} />}
+                                    {currentLevelId === 4 && <Level4Network onComplete={handleLevelComplete} addLog={addLog} />}
+                                </>
+                            ) : (
+                                <BossLevel originalMessage={originalMessage} addLog={addLog} onRestart={handleRestart} />
+                            )}
+                        </div>
+
+                        <div className="flex flex-col lg:flex-row gap-6 items-stretch mb-10 h-[330px]">
+                            <div className="w-full lg:w-1/2 h-full">
+                                <EncapsulationTracker activeLevel={currentLevelId} />
+                            </div>
+                            <div className="w-full lg:w-1/2 h-full">
+                                <SystemTerminal logs={logs} />
+                            </div>
+                        </div>
+                    </main>
+                    
+                    {showTeacherModal && <TeacherLoginModal onClose={() => setShowTeacherModal(false)} onCodeSubmit={handleSecretCode} />}
+                    
+                    <div className="fixed bottom-4 right-4 z-40">
+                        <button 
+                            onClick={() => setShowTeacherModal(true)} 
+                            className="p-3 bg-slate-800 rounded-full border border-slate-600 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 hover:border-cyan-500 opacity-100 transition-all shadow-lg focus:outline-none" 
+                            title="Lehrermenü (System Override)"
+                        >
+                            <Settings size={20}/>
+                        </button>
                     </div>
+                    
+                    <GlobalTooltip />
                 </div>
-            </main>
-            
-            {showTeacherModal && <TeacherLoginModal onClose={() => setShowTeacherModal(false)} onCodeSubmit={handleSecretCode} />}
-            
-            <div className="fixed bottom-4 right-4 z-40">
-                <button 
-                    onClick={() => setShowTeacherModal(true)} 
-                    className="p-3 bg-slate-800 rounded-full border border-slate-600 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 hover:border-cyan-500 opacity-100 transition-all shadow-lg focus:outline-none" 
-                    title="Lehrermenü (System Override)"
-                >
-                    <Settings size={20}/>
-                </button>
-            </div>
-            
-            <GlobalTooltip />
-        </div>
-    );
-}
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
