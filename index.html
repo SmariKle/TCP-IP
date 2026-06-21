@@ -289,7 +289,7 @@
                         </div>
                         
                         {segments.map((segId) => (
-                            <div key={segId} className="flex items-stretch font-mono-term text-[13px] shadow-2xl border border-slate-700/50 rounded-lg overflow-hidden relative z-10 fade-in h-16 w-max mx-auto md:mx-0 shrink-0">
+                            <div key={segId} className={`flex items-stretch font-mono-term text-[13px] shadow-2xl border border-slate-700/50 rounded-lg overflow-hidden relative z-10 fade-in h-16 w-max mx-auto md:mx-0 shrink-0`}>
                                 {activeLevel >= 4 && (
                                     <div className="bg-emerald-900/80 text-emerald-200 px-5 flex flex-col items-center justify-center border-r border-emerald-950/50">
                                         <span className="font-bold tracking-widest">MAC</span>
@@ -708,7 +708,7 @@
 
             const handleSend = () => {
                 setStatus('sent');
-                addLog(`[ETH] Ethernet-Header generiert (Src-MAC -> Dst-MAC).`, "success");
+                addLog("[ETH] Ethernet-Header generiert (Src-MAC -> Dst-MAC).", "success");
                 setTimeout(() => {
                     addLog("[SYS] Übertragung erfolgreich.", "success");
                     setStatus('done');
@@ -818,8 +818,8 @@
                 let f = newFrames[idx];
                 
                 if(f.l > 0) {
-                    if(f.l === 3) addLog(`> MAC-Header & FCS-Trailer erfolgreich abgestreift.`);
-                    if(f.l === 2) addLog(`> IP-Header geprüft und abgestreift.`);
+                    if(f.l === 3) addLog("> MAC-Header & FCS-Trailer erfolgreich abgestreift.");
+                    if(f.l === 2) addLog("> IP-Header geprüft und abgestreift.");
                     f.l -= 1;
                     setFrames(newFrames);
                 } else if(f.l === 0 && !assembled.includes(f.id)) {
@@ -1044,9 +1044,7 @@
                                         onClick={() => { if(isUnlocked) setCurrentLevelId(l.id); }} 
                                         className={`flex flex-col items-center gap-2 transition-all duration-300 ${isActive ? 'opacity-100 scale-110' : isUnlocked ? 'opacity-70 cursor-pointer hover:-translate-y-1' : 'opacity-30 cursor-not-allowed'}`}
                                     >
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 shadow-lg
-                                            ${isActive ? 'border-' + l.color + '-400 bg-' + l.color + '-950/80 text-' + l.color + '-300 shadow-[0_0_20px_rgba(var(--tw-colors-' + l.color + '-500),0.4)]' : 
-                                              isCompleted ? 'border-emerald-500/50 bg-emerald-950/30 text-emerald-500' : 'border-slate-700 bg-slate-800/50 text-slate-500'}`}>
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 shadow-lg ${isActive ? 'border-' + l.color + '-400 bg-' + l.color + '-950/80 text-' + l.color + '-300 shadow-[0_0_20px_rgba(var(--tw-colors-' + l.color + '-500),0.4)]' : isCompleted ? 'border-emerald-500/50 bg-emerald-950/30 text-emerald-500' : 'border-slate-700 bg-slate-800/50 text-slate-500'}`}>
                                             {isCompleted && !isActive ? <CheckCircle2 size={24}/> : <l.Icon size={24}/>}
                                         </div>
                                         <span className={`text-xs font-bold tracking-wider uppercase ${isActive ? 'text-white' : 'text-slate-400'}`}>{l.short}</span>
